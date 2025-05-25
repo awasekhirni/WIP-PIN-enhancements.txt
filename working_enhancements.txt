@@ -1,0 +1,15 @@
+#Copyright  β ORI Inc. Awase Khirni Syed 2025.
+#PIN
+# Social Network and Graph Enhancements 
+1. Graph Relationship Types - expand the relationship types beyond basic connections 
+2. relationship strength algorithms - expand on metrics to configure algorithms for computing relationship strength, correlations 
+3. social influence scoring - store and calculate social influence metrics 
+4. network centrality metrics - identify key parameters, metrics to compute network centrality
+5. community detection results and metrics - build community detection algorithms
+6. Interest graph - lets build and model user interests as a graph tie it with each user profile 
+7. expertise graph storage - we can extend this to map with current expertise, anticipated/goals for user profile, learning goals. this approach may help students enhance their skills yoy.
+8. recommendations - devise recommendations graphs , tag them autonomous (ML model generated), user preference based, peer recommendation based, model it based on degrees of freedom ( no of independent pieces of information used to compute a statistic variable)
+9. trust scoring metrics - track network growth and health metrics based on user defined criteria.
+10.multi-dimensional relationship storage - store relationships as graph based json with multiple attributes 
+11. Provide transparent insights to users for free, also identify cyber stalker, scammer alert incorporating scammer hunt, various other data to enrich and protect users proactively. 
+what else... should we incorporate..?
