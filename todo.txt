@@ -4,3 +4,4 @@
 
 1. build an online airline reservation platform for blockchain and give it for free to all airlines to avoid scammers, scamming customers like how they did it to me.
   --Immutable records, escrow payments, refunds via smart contract, IPFS integration., web3, rinkeby/mainnet
+2. need to add bombora and semrush style internal analytics and taxonmy features
