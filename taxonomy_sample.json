@@ -1,0 +1,78 @@
+//# #Copyright (C) 2025 β ORI Inc.
+//# #Written by Awase Khirni Syed 2025
+
+{
+  "taxonomy_version": "2.4",
+  "last_updated": "2023-11-16",
+  "entries": [
+    {
+      "id": "FIN-INV-001",
+      "category": "Accounting & Finance",
+      "subcategory": "Invoicing",
+      "topic": "Electronic Invoicing",
+      "subtopic": "Automated Reminders",
+      "classification": {
+        "audience": ["B2B"],
+        "industry": ["FinTech", "SaaS"],
+        "business_function": ["Accounts Receivable"]
+      },
+      "metrics": {
+        "search_volume": 3200,
+        "regional_search_volume": {
+          "North America": 1800,
+          "EU": 900,
+          "APAC": 400
+        },
+        "competition_score": 0.72,
+        "cpc_range": [2.50, 4.75],
+        "trend_growth": 0.15
+      }
+    },
+    {
+      "id": "ECO-CHK-001",
+      "category": "E-Commerce",
+      "subcategory": "Checkout Optimization",
+      "topic": "One-Click Checkout",
+      "subtopic": "Mobile Wallet Integration",
+      "classification": {
+        "audience": ["B2C"],
+        "industry": ["Retail", "Digital Goods"],
+        "business_function": ["Conversion Optimization"]
+      },
+      "metrics": {
+        "search_volume": 8900,
+        "regional_search_volume": {
+          "North America": 4200,
+          "EU": 2300,
+          "APAC": 1800
+        },
+        "competition_score": 0.85,
+        "cpc_range": [3.25, 6.50],
+        "trend_growth": 0.28
+      }
+    },
+    {
+      "id": "HLT-TEL-001",
+      "category": "Healthcare",
+      "subcategory": "Telemedicine",
+      "topic": "Remote Monitoring",
+      "subtopic": "Wearable Integration",
+      "classification": {
+        "audience": ["B2B", "B2C"],
+        "industry": ["HealthTech", "IoT"],
+        "business_function": ["Patient Engagement"]
+      },
+      "metrics": {
+        "search_volume": 5400,
+        "regional_search_volume": {
+          "North America": 2900,
+          "EU": 1500,
+          "APAC": 800
+        },
+        "competition_score": 0.63,
+        "cpc_range": [4.00, 7.25],
+        "trend_growth": 0.42
+      }
+    }
+  ]
+}
