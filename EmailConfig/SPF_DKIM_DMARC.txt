@@ -1,0 +1,13 @@
+# to ensure that all the emails are protected
+# strictly follow the steps for SPF, DKIM,DMARC configuration. 
+Super Toolbox - to check SPF 
+https://mxtoolbox.com/SuperTool.aspx
+#DKIM record check 
+ensure thunderbird has DKIM verified plugin 
+https://toolbox.googleapps.com/apps/dig/#TXT/
+enter the subdomain default._domainkey.domainname.com to check if the DKIM record is present and valid 
+#DMARC record check 
+Using online tools like MXToolbox to perform DMARC record is valid 
+https://mxtoolbox.com/SuperTool.aspx
+Use an online tool like https://mxtoolbox.com/SuperTool.aspx.
+- Enter `_dmarc.domain.com` to see if the DMARC record is set up and what policy is in place.
