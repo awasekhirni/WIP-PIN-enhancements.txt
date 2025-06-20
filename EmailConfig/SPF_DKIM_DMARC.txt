@@ -11,3 +11,5 @@ Using online tools like MXToolbox to perform DMARC record is valid
 https://mxtoolbox.com/SuperTool.aspx
 Use an online tool like https://mxtoolbox.com/SuperTool.aspx.
 - Enter `_dmarc.domain.com` to see if the DMARC record is set up and what policy is in place.
+
+One single script to automatically configure SPF,DKIM and DMARC. Also to constantly monitor changes to the configuration and alert to Senior management of the organization
