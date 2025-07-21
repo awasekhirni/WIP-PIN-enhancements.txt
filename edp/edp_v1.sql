@@ -4,7 +4,7 @@
 -- Date: 2025-05-15
 -- Author: Awase Khirni Syed
 -- Copyright: 2025 β ORI Inc.Canada. All Rights Reserved.
--- Description: Comprehensive schema for OHIP billing with governance
+-- Description: Comprehensive schema for Data Dictionary
 -- =============================================
 
 -- Business Case: Manages databases data for the application.
