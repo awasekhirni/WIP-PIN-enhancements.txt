@@ -1,0 +1,457 @@
+HRMS Implementation Order (Dependency-Based)
+==================================================
+
+FOUNDATIONAL TABLES (No Dependencies):
+  auth.roles
+  auth.permissions
+  hr.business_units
+  finance.card_issuers
+  finance.expense_categories
+  finance.business_bank_accounts
+  finance.chart_of_accounts
+  finance.accounting_platforms
+  finance.dynamic_policy_rules
+  finance.budget_stress_scenarios
+  finance.clients
+  hr.benefits
+  recruitment.candidates
+  payroll.pay_grades
+  payroll.pay_periods
+  learning.courses
+  compliance.data_retention_policies
+  data_governance.data_quality_rules
+  data_governance.data_sources
+  data_governance.data_profiling_results
+  analytics.insight_types
+  analytics.deal_profiles
+  hr.leave_types
+  learning.training_programs
+  learning.certifications
+  benefits.benefit_plans
+  hr.surveys
+  hr.recognition_types
+  hr.asset_types
+  hr.wellness_programs
+  finance.vendors
+  hr.education_levels
+  hr.licenses
+  hr.mentorship_programs
+  hr.work_locations
+  hr.background_check_types
+  benefits.health_insurance_plans
+  benefits.retirement_plans
+  benefits.equity_plans
+  hr.career_paths
+  hr.workflows
+  data_governance.data_archive_policies
+  data_governance.data_purge_policies
+  data_governance.data_quality_metrics
+  data_governance.data_dictionary_enums
+  data_governance.data_catalog_tags
+  analytics.deal_matching_algorithms
+  analytics.subscription_plans
+  analytics.kpi_data_sources
+  analytics.website_pages
+  hr.onboarding_checklists
+  hr.offboarding_checklists
+  learning.training_providers
+  hr.skill_categories
+  hr.competency_categories
+  benefits.flexible_benefit_options
+  hr.portal_settings
+  performance.feedback_questions
+  finance.travel_expense_categories
+  payroll.deduction_types
+  payroll.tax_types
+  payroll.pay_components
+  learning.learning_paths
+  benefits.enrollment_periods
+  recruitment.candidate_stages
+  recruitment.candidate_sources
+  recruitment.interview_panels
+  benefits.custom_benefits
+  compliance.data_masking_policies
+  data_governance.data_classifications
+  learning.training_categories
+  performance.competency_frameworks
+  performance.review_templates
+  recruitment.screening_questions
+  recruitment.recruitment_agencies
+  performance.peer_feedback_questions
+  hr.time_entry_types
+  recruitment.assessment_types
+  payroll.tax_jurisdictions
+  compliance.regulatory_updates
+  auth.system_settings
+  auth.scheduled_jobs
+  hr.forum_categories
+  recruitment.recruitment_pipelines
+  hr.wellness_challenges
+  hr.workflow_notification_templates
+  hr.faq_categories
+  compliance.data_processing_activities
+  learning.e_learning_modules
+  performance.feedback_cycles
+  recruitment.candidate_note_categories
+  hr.workflow_templates
+  hr.grievance_types
+  hr.disciplinary_action_types
+  hr.recognition_programs
+  finance.travel_policies
+  hr.ticket_categories
+  hr.degrees
+  hr.majors
+  hr.issuing_bodies
+  hr.safety_training_modules
+  hr.feedback_types
+  hr.shift_types
+  hr.office_amenities
+  benefits.vesting_schedules
+  hr.award_categories
+  performance.performance_review_cycles
+  recruitment.candidate_tags
+  payroll.payroll_calendars
+  benefits.life_events
+
+IMPLEMENTATION ORDER:
+  1. benefits.life_events
+  2. payroll.tax_types
+  3. recruitment.interview_panels
+  4. recruitment.candidate_note_categories
+  5. hr.workflow_notification_templates
+  6. payroll.pay_grades
+  7. learning.certifications
+  8. performance.feedback_questions
+  9. benefits.vesting_schedules
+ 10. analytics.insight_types
+ 11. payroll.payroll_calendars
+ 12. hr.grievance_types
+ 13. analytics.deal_profiles
+ 14. benefits.benefit_plans
+ 15. performance.feedback_cycles
+ 16. data_governance.data_profiling_results
+ 17. data_governance.data_purge_policies
+ 18. finance.budget_stress_scenarios
+ 19. hr.time_entry_types
+ 20. analytics.website_pages
+ 21. benefits.enrollment_periods
+ 22. compliance.regulatory_updates
+ 23. hr.business_units
+ 24. auth.permissions
+ 25. benefits.equity_plans
+ 26. hr.mentorship_programs
+ 27. hr.shift_types
+ 28. benefits.custom_benefits
+ 29. hr.asset_types
+ 30. finance.vendors
+ 31. data_governance.data_sources
+ 32. finance.business_bank_accounts
+ 33. recruitment.assessment_types
+ 34. hr.faq_categories
+ 35. hr.forum_categories
+ 36. performance.performance_review_cycles
+ 37. hr.skill_categories
+ 38. hr.award_categories
+ 39. analytics.kpi_data_sources
+ 40. hr.competency_categories
+ 41. hr.offboarding_checklists
+ 42. performance.competency_frameworks
+ 43. benefits.flexible_benefit_options
+ 44. data_governance.data_quality_rules
+ 45. compliance.data_processing_activities
+ 46. hr.wellness_challenges
+ 47. recruitment.candidate_tags
+ 48. recruitment.screening_questions
+ 49. auth.system_settings
+ 50. payroll.pay_periods
+ 51. learning.training_providers
+ 52. hr.workflows
+ 53. hr.recognition_types
+ 54. hr.benefits
+ 55. hr.disciplinary_action_types
+ 56. learning.training_categories
+ 57. performance.performance_metric_definitions
+ 58. data_governance.data_catalog_tags
+ 59. hr.wellness_programs
+ 60. analytics.subscription_plans
+ 61. auth.roles
+ 62. data_governance.data_dictionary_enums
+ 63. auth.scheduled_jobs
+ 64. learning.training_programs
+ 65. payroll.pay_components
+ 66. payroll.deduction_types
+ 67. benefits.health_insurance_plans
+ 68. finance.accounting_platforms
+ 69. finance.clients
+ 70. finance.expense_categories
+ 71. hr.education_levels
+ 72. recruitment.recruitment_pipelines
+ 73. hr.ticket_categories
+ 74. benefits.retirement_plans
+ 75. hr.portal_settings
+ 76. recruitment.candidate_stages
+ 77. hr.work_locations
+ 78. hr.recognition_programs
+ 79. recruitment.recruitment_agencies
+ 80. payroll.tax_jurisdictions
+ 81. finance.dynamic_policy_rules
+ 82. data_governance.data_classifications
+ 83. hr.office_amenities
+ 84. compliance.data_retention_policies
+ 85. performance.review_templates
+ 86. recruitment.candidates
+ 87. finance.card_issuers
+ 88. performance.peer_feedback_questions
+ 89. finance.travel_expense_categories
+ 90. learning.e_learning_modules
+ 91. hr.issuing_bodies
+ 92. hr.leave_types
+ 93. hr.degrees
+ 94. learning.courses
+ 95. data_governance.data_archive_policies
+ 96. hr.career_paths
+ 97. hr.safety_training_modules
+ 98. finance.chart_of_accounts
+ 99. hr.background_check_types
+100. hr.majors
+101. hr.surveys
+102. data_governance.data_quality_metrics
+103. learning.learning_paths
+104. recruitment.candidate_sources
+105. hr.feedback_types
+106. hr.workflow_templates
+107. compliance.data_masking_policies
+108. finance.travel_policies
+109. analytics.deal_matching_algorithms
+110. hr.onboarding_checklists
+111. hr.licenses
+112. analytics.matching_results (depends on: analytics.deal_profiles)
+113. benefits.benefit_plan_options (depends on: benefits.benefit_plans)
+114. finance.scenario_cashflow_projections (depends on: finance.budget_stress_scenarios)
+115. hr.departments (depends on: hr.business_units)
+116. hr.assets (depends on: hr.asset_types)
+117. compliance.data_processing_agreements (depends on: finance.vendors)
+118. finance.vendor_contracts (depends on: finance.vendors)
+119. hr.faqs (depends on: hr.faq_categories)
+120. hr.skills (depends on: hr.skill_categories)
+121. hr.competencies (depends on: hr.competency_categories)
+122. hr.offboarding_checklist_items (depends on: hr.offboarding_checklists)
+123. hr.workflow_instances (depends on: hr.workflows)
+124. benefits.wellness_activities (depends on: hr.wellness_programs)
+125. auth.role_permissions (depends on: auth.permissions, auth.roles)
+126. hr.workflow_steps (depends on: auth.roles, hr.workflows)
+127. data_governance.data_dictionary_enum_values (depends on: data_governance.data_dictionary_enums)
+128. auth.job_execution_logs (depends on: auth.scheduled_jobs)
+129. payroll.deduction_limits (depends on: payroll.deduction_types)
+130. benefits.health_plan_tiers (depends on: benefits.health_insurance_plans)
+131. finance.accounting_sync_logs (depends on: finance.accounting_platforms)
+132. recruitment.pipeline_stages (depends on: recruitment.recruitment_pipelines)
+133. benefits.retirement_investment_options (depends on: benefits.retirement_plans)
+134. finance.policy_execution_logs (depends on: finance.dynamic_policy_rules)
+135. hr.location_amenities (depends on: hr.office_amenities, hr.work_locations)
+136. performance.review_questions (depends on: performance.review_templates)
+137. recruitment.candidate_skills (depends on: recruitment.candidates)
+138. hr.pre_boarding_tasks (depends on: recruitment.candidates)
+139. recruitment.candidate_screening_answers (depends on: recruitment.candidates, recruitment.screening_questions)
+140. recruitment.candidate_tag_assignments (depends on: recruitment.candidate_tags, recruitment.candidates)
+141. learning.course_modules (depends on: learning.courses)
+142. hr.survey_questions (depends on: hr.surveys)
+143. analytics.survey_results_summary (depends on: hr.surveys)
+144. hr.survey_sections (depends on: hr.surveys)
+145. learning.learning_path_courses (depends on: learning.courses, learning.learning_paths)
+146. analytics.deal_matching_runs (depends on: analytics.deal_matching_algorithms)
+147. analytics.ai_model_training_logs (depends on: analytics.deal_matching_algorithms)
+148. hr.onboarding_checklist_items (depends on: hr.onboarding_checklists)
+149. hr.cost_centers (depends on: hr.departments)
+150. finance.expense_policies (depends on: hr.departments)
+151. hr.positions (depends on: hr.departments)
+152. hr.workflow_instance_custom_fields (depends on: hr.workflow_instances)
+153. hr.workflow_transitions (depends on: hr.workflow_steps, hr.workflows)
+154. hr.survey_question_options (depends on: hr.survey_questions)
+155. finance.budgets (depends on: hr.cost_centers)
+156. hr.succession_plans (depends on: hr.positions)
+157. hr.career_path_steps (depends on: hr.career_paths, hr.positions)
+158. hr.career_path_step_skills (depends on: hr.career_path_steps, hr.skills)
+
+
+GROUPED BY SCHEMA:
+
+BENEFITS SCHEMA (13 tables):
+  benefits.life_events
+  benefits.vesting_schedules
+  benefits.benefit_plans
+  benefits.enrollment_periods
+  benefits.equity_plans
+  benefits.custom_benefits
+  benefits.flexible_benefit_options
+  benefits.health_insurance_plans
+  benefits.retirement_plans
+  benefits.benefit_plan_options
+  benefits.wellness_activities
+  benefits.health_plan_tiers
+  benefits.retirement_investment_options
+
+PAYROLL SCHEMA (8 tables):
+  payroll.tax_types
+  payroll.pay_grades
+  payroll.payroll_calendars
+  payroll.pay_periods
+  payroll.pay_components
+  payroll.deduction_types
+  payroll.tax_jurisdictions
+  payroll.deduction_limits
+
+RECRUITMENT SCHEMA (14 tables):
+  recruitment.interview_panels
+  recruitment.candidate_note_categories
+  recruitment.assessment_types
+  recruitment.candidate_tags
+  recruitment.screening_questions
+  recruitment.recruitment_pipelines
+  recruitment.candidate_stages
+  recruitment.recruitment_agencies
+  recruitment.candidates
+  recruitment.candidate_sources
+  recruitment.pipeline_stages
+  recruitment.candidate_skills
+  recruitment.candidate_screening_answers
+  recruitment.candidate_tag_assignments
+
+HR SCHEMA (58 tables):
+  hr.workflow_notification_templates
+  hr.grievance_types
+  hr.time_entry_types
+  hr.business_units
+  hr.mentorship_programs
+  hr.shift_types
+  hr.asset_types
+  hr.faq_categories
+  hr.forum_categories
+  hr.skill_categories
+  hr.award_categories
+  hr.competency_categories
+  hr.offboarding_checklists
+  hr.wellness_challenges
+  hr.workflows
+  hr.recognition_types
+  hr.benefits
+  hr.disciplinary_action_types
+  hr.wellness_programs
+  hr.education_levels
+  hr.ticket_categories
+  hr.portal_settings
+  hr.work_locations
+  hr.recognition_programs
+  hr.office_amenities
+  hr.issuing_bodies
+  hr.leave_types
+  hr.degrees
+  hr.career_paths
+  hr.safety_training_modules
+  hr.background_check_types
+  hr.majors
+  hr.surveys
+  hr.feedback_types
+  hr.workflow_templates
+  hr.onboarding_checklists
+  hr.licenses
+  hr.departments
+  hr.assets
+  hr.faqs
+  hr.skills
+  hr.competencies
+  hr.offboarding_checklist_items
+  hr.workflow_instances
+  hr.workflow_steps
+  hr.location_amenities
+  hr.pre_boarding_tasks
+  hr.survey_questions
+  hr.survey_sections
+  hr.onboarding_checklist_items
+  hr.cost_centers
+  hr.positions
+  hr.workflow_instance_custom_fields
+  hr.workflow_transitions
+  hr.survey_question_options
+  hr.succession_plans
+  hr.career_path_steps
+  hr.career_path_step_skills
+
+LEARNING SCHEMA (9 tables):
+  learning.certifications
+  learning.training_providers
+  learning.training_categories
+  learning.training_programs
+  learning.e_learning_modules
+  learning.courses
+  learning.learning_paths
+  learning.course_modules
+  learning.learning_path_courses
+
+PERFORMANCE SCHEMA (8 tables):
+  performance.feedback_questions
+  performance.feedback_cycles
+  performance.performance_review_cycles
+  performance.competency_frameworks
+  performance.performance_metric_definitions
+  performance.review_templates
+  performance.peer_feedback_questions
+  performance.review_questions
+
+ANALYTICS SCHEMA (10 tables):
+  analytics.insight_types
+  analytics.deal_profiles
+  analytics.website_pages
+  analytics.kpi_data_sources
+  analytics.subscription_plans
+  analytics.deal_matching_algorithms
+  analytics.matching_results
+  analytics.survey_results_summary
+  analytics.deal_matching_runs
+  analytics.ai_model_training_logs
+
+DATA_GOVERNANCE SCHEMA (10 tables):
+  data_governance.data_profiling_results
+  data_governance.data_purge_policies
+  data_governance.data_sources
+  data_governance.data_quality_rules
+  data_governance.data_catalog_tags
+  data_governance.data_dictionary_enums
+  data_governance.data_classifications
+  data_governance.data_archive_policies
+  data_governance.data_quality_metrics
+  data_governance.data_dictionary_enum_values
+
+FINANCE SCHEMA (17 tables):
+  finance.budget_stress_scenarios
+  finance.vendors
+  finance.business_bank_accounts
+  finance.accounting_platforms
+  finance.clients
+  finance.expense_categories
+  finance.dynamic_policy_rules
+  finance.card_issuers
+  finance.travel_expense_categories
+  finance.chart_of_accounts
+  finance.travel_policies
+  finance.scenario_cashflow_projections
+  finance.vendor_contracts
+  finance.accounting_sync_logs
+  finance.policy_execution_logs
+  finance.expense_policies
+  finance.budgets
+
+COMPLIANCE SCHEMA (5 tables):
+  compliance.regulatory_updates
+  compliance.data_processing_activities
+  compliance.data_retention_policies
+  compliance.data_masking_policies
+  compliance.data_processing_agreements
+
+AUTH SCHEMA (6 tables):
+  auth.permissions
+  auth.system_settings
+  auth.roles
+  auth.scheduled_jobs
+  auth.role_permissions
+  auth.job_execution_logs
