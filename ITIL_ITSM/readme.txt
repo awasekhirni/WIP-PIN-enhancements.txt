@@ -1,0 +1,11 @@
+--2025 β ORI Inc.Canada All Rights Reserved.
+-- ASSETIQ Enterprise Platform 
+-- Version: 1.0
+-- Created: 2025-07-30
+-- Author: Awase Khirni Syed
+-- All-IN-ONE ASSET INTELLIGENCE PLATFORM FOR THE ENTERPRISE
+----Service reliability (e.g., Incident Logging, Lifecycle Management)
+----Asset & infrastructure management (e.g., Infrastructure, Tools, Tracking)
+----Continuous improvement (e.g., Iterative, Improvement Loop, Learning)
+----Business alignment (e.g., Leadership, Transformation, Integration)
+----Governance and trust (e.g., Integrity, Transparency, Trust)
