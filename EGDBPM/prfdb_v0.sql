@@ -26,12 +26,13 @@
 -- advanced alerting -- to have a sophisticated alerting system with custom rules
 -- beenchmarking framework-- performacne testing and comparison capabiltieis
 -- ML integration -- machine learning features for predictive analytics
--- distributed query monitoring and tracing
--- workload management and advanced resource governance
--- cache managmeent, advanced query cache and resutl set management
--- advanced security and compliance monitoring
--- advanced backup and recovery perfromance monitoring
--- cost management - query cost attribution and optimization recommendations
+-- distributed tracking -- corss database query monitoring and performance tracking 
+--- resource governance -- advanced workload amnagement and resource allcoation 
+--intelligent caching -- query result caching with invalidation 
+-- security compliance monitoring -- advanced audit logging and data sensitivity monitoring 
+-- backup monitoring -- comprehensive backup/recovery performance tracking 
+-- cost management -- query cost attribution and optimization recommendation
+
 
 
 
@@ -291,7 +292,7 @@ SELECT query_performance.cleanup_old_logs(30);
 
 
 -- Function to extract more detailed query metadata
--- advanced querya nalysis
+-- advanced querya nalysis 
 
 CREATE OR REPLACE FUNCTION query_performance.analyze_query_complexity(query_text TEXT)
 RETURNS TABLE(
@@ -311,29 +312,29 @@ BEGIN
     -- Count JOINs
     SELECT COUNT(*) INTO v_join_count
     FROM regexp_matches(lower(query_text), '\s+join\s+', 'g');
-
+    
     -- Count subqueries (approximate)
     SELECT COUNT(*) INTO v_subquery_count
     FROM regexp_matches(lower(query_text), '\(\s*select', 'g');
-
+    
     -- Analyze WHERE clause complexity
     SELECT COUNT(*) INTO v_where_complexity
     FROM regexp_matches(lower(query_text), '(and|or)\s+\w+\s*(=|!=|>|<|like|in)', 'g');
-
+    
     -- Check for aggregations
     v_has_agg := lower(query_text) ~ '\b(count|sum|avg|max|min|group by)\b';
-
+    
     -- Calculate complexity score
-    v_complexity := v_join_count * 10 + v_subquery_count * 15 +
+    v_complexity := v_join_count * 10 + v_subquery_count * 15 + 
                    v_where_complexity * 5 + (CASE WHEN v_has_agg THEN 8 ELSE 0 END);
-
-    RETURN QUERY SELECT v_complexity, v_join_count, v_subquery_count,
+    
+    RETURN QUERY SELECT v_complexity, v_join_count, v_subquery_count, 
                         v_where_complexity, v_has_agg;
 END;
 $$ LANGUAGE plpgsql;
 
 
---- integrating query plan analysis function
+--- integrating query plan analysis function 
 -- Function to capture actual execution plans
 CREATE OR REPLACE FUNCTION query_performance.get_query_plan_with_stats(query_text TEXT)
 RETURNS TABLE(
@@ -346,15 +347,15 @@ DECLARE
 BEGIN
     -- This requires enabling pg_stat_statements extension
     EXECUTE 'EXPLAIN (ANALYZE, FORMAT JSON) ' || query_text INTO plan_result;
-
-    RETURN QUERY SELECT
+    
+    RETURN QUERY SELECT 
         plan_result."QUERY PLAN"::JSONB,
         (plan_result."QUERY PLAN"::JSONB->0->'Execution Time')::NUMERIC,
         (plan_result."QUERY PLAN"::JSONB->0->'Plan'->>'Actual Rows')::BIGINT;
 END;
 $$ LANGUAGE plpgsql;
 
---- to store performancee baselines and anomaly detection
+--- to store performancee baselines and anomaly detection 
 -- Table to store performance baselines
 CREATE TABLE IF NOT EXISTS query_performance.query_baselines (
     baseline_id SERIAL PRIMARY KEY,
@@ -373,10 +374,10 @@ CREATE OR REPLACE FUNCTION query_performance.update_query_baselines()
 RETURNS VOID AS $$
 BEGIN
     INSERT INTO query_performance.query_baselines (
-        schema_name, query_hash, avg_execution_time_ms, avg_rows_returned,
+        schema_name, query_hash, avg_execution_time_ms, avg_rows_returned, 
         execution_count, first_seen, last_seen
     )
-    SELECT
+    SELECT 
         schema_name, query_hash,
         AVG(execution_time_ms) as avg_execution_time,
         AVG(rows_returned) as avg_rows,
@@ -389,11 +390,11 @@ BEGIN
     ON CONFLICT (schema_name, query_hash)
     DO UPDATE SET
         avg_execution_time_ms = (
-            (query_performance.query_baselines.avg_execution_time_ms * query_performance.query_baselines.execution_count) +
+            (query_performance.query_baselines.avg_execution_time_ms * query_performance.query_baselines.execution_count) + 
             (EXCLUDED.avg_execution_time_ms * EXCLUDED.execution_count)
         ) / (query_performance.query_baselines.execution_count + EXCLUDED.execution_count),
         avg_rows_returned = (
-            (query_performance.query_baselines.avg_rows_returned * query_performance.query_baselines.execution_count) +
+            (query_performance.query_baselines.avg_rows_returned * query_performance.query_baselines.execution_count) + 
             (EXCLUDED.avg_rows_returned * EXCLUDED.execution_count)
         ) / (query_performance.query_baselines.execution_count + EXCLUDED.execution_count),
         execution_count = query_performance.query_baselines.execution_count + EXCLUDED.execution_count,
@@ -403,21 +404,21 @@ $$ LANGUAGE plpgsql;
 
 -- Anomaly detection view
 CREATE OR REPLACE VIEW query_performance.query_anomalies AS
-SELECT
+SELECT 
     ql.*,
     qb.avg_execution_time_ms as baseline_time,
-    CASE
-        WHEN ql.execution_time_ms > qb.avg_execution_time_ms * 2
-        THEN 'SLOW'
-        ELSE 'NORMAL'
+    CASE 
+        WHEN ql.execution_time_ms > qb.avg_execution_time_ms * 2 
+        THEN 'SLOW' 
+        ELSE 'NORMAL' 
     END as performance_status
 FROM query_performance.query_log ql
-JOIN query_performance.query_baselines qb
+JOIN query_performance.query_baselines qb 
     ON ql.schema_name = qb.schema_name AND ql.query_hash = qb.query_hash
 WHERE ql.executed_at > NOW() - INTERVAL '1 day'
     AND ql.execution_time_ms > qb.avg_execution_time_ms * 2;
 
--- resource usage monitoring
+-- resource usage monitoring 
 -- Enhanced logging table with resource metrics
 ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS cpu_time_ms DECIMAL(12,3);
 ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS io_time_ms DECIMAL(12,3);
@@ -438,7 +439,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
----optimization suggestions
+---optimization suggestions 
 -- Table for optimization suggestions
 CREATE TABLE IF NOT EXISTS query_performance.optimization_suggestions (
     suggestion_id SERIAL PRIMARY KEY,
@@ -460,7 +461,7 @@ BEGIN
     INSERT INTO query_performance.optimization_suggestions (
         schema_name, query_hash, suggestion_type, suggestion_text, priority, impact_score
     )
-    SELECT
+    SELECT 
         schema_name, query_hash, 'MISSING_INDEX',
         'Consider adding index on columns used in WHERE clauses: ' || array_to_string(tables_used, ', '),
         4,
@@ -471,7 +472,7 @@ BEGIN
         AND tables_used IS NOT NULL
         AND NOT EXISTS (
             SELECT 1 FROM query_performance.optimization_suggestions os
-            WHERE os.schema_name = ql.schema_name
+            WHERE os.schema_name = ql.schema_name 
                 AND os.query_hash = ql.query_hash
                 AND os.suggestion_type = 'MISSING_INDEX'
         )
@@ -480,7 +481,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
----real-time monitoring and alerts implementation
+---real-time monitoring and alerts implementation 
 -- Table for alert configurations
 CREATE TABLE IF NOT EXISTS query_performance.alert_configurations (
     config_id SERIAL PRIMARY KEY,
@@ -510,7 +511,7 @@ DECLARE
     alert_rec RECORD;
     query_rec RECORD;
 BEGIN
-    FOR alert_rec IN
+    FOR alert_rec IN 
         SELECT * FROM query_performance.alert_configurations WHERE enabled = TRUE
     LOOP
         -- Check for queries that exceed thresholds
@@ -524,20 +525,20 @@ BEGIN
             -- Log the alert
             INSERT INTO query_performance.alert_logs (config_id, query_log_id, alert_message)
             VALUES (
-                alert_rec.config_id,
+                alert_rec.config_id, 
                 query_rec.log_id,
                 'Query exceeded threshold: ' || query_rec.execution_time_ms || 'ms > ' || alert_rec.threshold_execution_time_ms || 'ms'
             );
-
+            
             -- Here you would implement actual alert delivery (email, Slack, etc.)
-            RAISE NOTICE 'ALERT: Query % exceeded threshold in schema %',
+            RAISE NOTICE 'ALERT: Query % exceeded threshold in schema %', 
                         query_rec.query_text, query_rec.schema_name;
         END LOOP;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
---enahncement to classify and tag the queries
+--enahncement to classify and tag the queries 
 -- Add tagging support
 ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS tags TEXT[];
 ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS business_process TEXT;
@@ -546,28 +547,28 @@ ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS business_proces
 CREATE OR REPLACE FUNCTION query_performance.auto_tag_queries()
 RETURNS VOID AS $$
 BEGIN
-    UPDATE query_performance.query_log
-    SET tags = ARRAY['reporting']
-    WHERE query_text ~* '\b(report|summary|dashboard)\b'
+    UPDATE query_performance.query_log 
+    SET tags = ARRAY['reporting'] 
+    WHERE query_text ~* '\b(report|summary|dashboard)\b' 
         AND tags IS NULL;
 
-    UPDATE query_performance.query_log
-    SET tags = ARRAY['etl']
-    WHERE query_text ~* '\b(insert|update|delete|copy|import)\b'
+    UPDATE query_performance.query_log 
+    SET tags = ARRAY['etl'] 
+    WHERE query_text ~* '\b(insert|update|delete|copy|import)\b' 
         AND tags IS NULL;
 
-    UPDATE query_performance.query_log
-    SET tags = ARRAY['search']
-    WHERE query_text ~* '\b(where.*like|fulltext|tsvector)\b'
+    UPDATE query_performance.query_log 
+    SET tags = ARRAY['search'] 
+    WHERE query_text ~* '\b(where.*like|fulltext|tsvector)\b' 
         AND tags IS NULL;
 END;
 $$ LANGUAGE plpgsql;
 
 
--- enahncement to create views for performance trends and forecasting
+-- enahncement to create views for performance trends and forecasting 
 -- View for performance trends
 CREATE OR REPLACE VIEW query_performance.performance_trends AS
-SELECT
+SELECT 
     schema_name,
     DATE_TRUNC('hour', executed_at) as hour_bucket,
     COUNT(*) as query_count,
@@ -593,8 +594,8 @@ RETURNS TABLE(
 BEGIN
     -- This would typically use statistical forecasting methods
     -- Placeholder for now
-    RETURN QUERY
-    SELECT
+    RETURN QUERY 
+    SELECT 
         NOW() + (n || ' hours')::INTERVAL as forecast_time,
         100.0::DECIMAL as predicted_avg_time,
         80.0::DECIMAL as confidence_interval_lower,
@@ -603,7 +604,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
---security and audit enhancements
+--security and audit enhancements 
 -- Add security-related fields
 ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS session_id TEXT;
 ALTER TABLE query_performance.query_log ADD COLUMN IF NOT EXISTS application_name TEXT;
@@ -632,7 +633,7 @@ BEGIN
     v_tables_used := query_performance.extract_table_names(p_query_text);
     v_query_type := query_performance.get_query_type(p_query_text);
     v_query_hash := md5(p_query_text);
-
+    
     -- Insert performance data with enhanced security context
     INSERT INTO query_performance.query_log (
         schema_name, query_text, execution_time_ms, planning_time_ms, total_time_ms,
@@ -647,9 +648,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- data retention and archiving strategy
+-- data retention and archiving strategy 
 -- Partitioned table for long-term storage
--- Create the main partitioned table
+-- Create the main partitioned table 
 CREATE TABLE IF NOT EXISTS query_performance.query_log_archive (
     log_id SERIAL,
     schema_name TEXT NOT NULL,
@@ -692,13 +693,13 @@ PARTITION OF query_performance.query_log_archive
 FOR VALUES FROM ('2024-03-01') TO ('2024-04-01');
 
 -- Add indexes to the partitioned table
-CREATE INDEX IF NOT EXISTS idx_query_log_archive_schema_time
+CREATE INDEX IF NOT EXISTS idx_query_log_archive_schema_time 
 ON query_performance.query_log_archive (schema_name, executed_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_query_log_archive_execution_time
+CREATE INDEX IF NOT EXISTS idx_query_log_archive_execution_time 
 ON query_performance.query_log_archive (execution_time_ms DESC);
 
-CREATE INDEX IF NOT EXISTS idx_query_log_archive_tables_used
+CREATE INDEX IF NOT EXISTS idx_query_log_archive_tables_used 
 ON query_performance.query_log_archive USING GIN (tables_used);
 
 -- Function to create partitions automatically
@@ -714,11 +715,11 @@ BEGIN
     start_date := DATE_TRUNC('month', target_date);
     end_date := start_date + INTERVAL '1 month';
     partition_name := 'query_log_archive_' || TO_CHAR(start_date, 'YYYY_MM');
-
+    
     -- Check if partition already exists
     IF NOT EXISTS (
-        SELECT 1 FROM pg_tables
-        WHERE schemaname = 'query_performance'
+        SELECT 1 FROM pg_tables 
+        WHERE schemaname = 'query_performance' 
         AND tablename = partition_name
     ) THEN
         EXECUTE format('
@@ -760,25 +761,25 @@ DECLARE
     cutoff_date TIMESTAMP WITH TIME ZONE;
 BEGIN
     cutoff_date := NOW() - INTERVAL '1 day' * older_than_days;
-
+    
     -- Move old data to archive table (partitioned)
     INSERT INTO query_performance.query_log_archive
     SELECT * FROM query_performance.query_log
     WHERE executed_at < cutoff_date;
-
+    
     GET DIAGNOSTICS archived_count = ROW_COUNT;
-
+    
     -- Delete from main table
     DELETE FROM query_performance.query_log
     WHERE executed_at < cutoff_date;
-
+    
     RETURN archived_count;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get archive statistics
 CREATE OR REPLACE VIEW query_performance.archive_statistics AS
-SELECT
+SELECT 
     'query_log_archive' as table_name,
     COUNT(*) as total_rows,
     MIN(executed_at) as earliest_date,
@@ -796,11 +797,11 @@ DECLARE
     cutoff_date DATE;
 BEGIN
     cutoff_date := DATE_TRUNC('month', CURRENT_DATE - (older_than_months || ' months')::INTERVAL);
-
+    
     FOR partition_rec IN
-        SELECT tablename
-        FROM pg_tables
-        WHERE schemaname = 'query_performance'
+        SELECT tablename 
+        FROM pg_tables 
+        WHERE schemaname = 'query_performance' 
         AND tablename LIKE 'query_log_archive_%'
         AND tablename < 'query_log_archive_' || TO_CHAR(cutoff_date, 'YYYY_MM')
     LOOP
@@ -825,7 +826,7 @@ SELECT query_performance.archive_old_logs(90);
 SELECT * FROM query_performance.drop_old_partitions(24);
 
 
---- External Monitoring of API endpoints
+--- External Monitoring of API endpoints 
 -- Function to generate performance report JSON
 CREATE OR REPLACE FUNCTION query_performance.get_performance_report(
     p_schema_name TEXT DEFAULT NULL,
@@ -868,7 +869,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- table for database health metrics
+-- table for database health metrics 
 -- Table for database health metrics
 CREATE TABLE IF NOT EXISTS query_performance.database_health_metrics (
     metric_id SERIAL PRIMARY KEY,
@@ -902,32 +903,32 @@ BEGIN
     -- Active connections
     SELECT COUNT(*) INTO v_active_conn FROM pg_stat_activity WHERE state = 'active';
     SELECT setting::INTEGER INTO v_max_conn FROM pg_settings WHERE name = 'max_connections';
-
+    
     -- Cache hit ratio (approximate)
-    SELECT
-        CASE
-            WHEN (sum(heap_blks_hit) + sum(heap_blks_read)) > 0
+    SELECT 
+        CASE 
+            WHEN (sum(heap_blks_hit) + sum(heap_blks_read)) > 0 
             THEN ROUND((sum(heap_blks_hit)::DECIMAL / (sum(heap_blks_hit) + sum(heap_blks_read))) * 100, 2)
-            ELSE 0
+            ELSE 0 
         END INTO v_cache_hit
     FROM pg_statio_user_tables;
-
+    
     -- Dead tuples
     SELECT COALESCE(SUM(n_dead_tup), 0) INTO v_dead_tuples FROM pg_stat_user_tables;
-
+    
     -- Autovacuum status
     SELECT EXISTS (
-        SELECT 1 FROM pg_stat_activity
+        SELECT 1 FROM pg_stat_activity 
         WHERE query LIKE '%autovacuum%' AND state = 'active'
     ) INTO v_autovacuum;
-
+    
     -- Background workers
-    SELECT COUNT(*) INTO v_bg_workers
-    FROM pg_stat_activity
+    SELECT COUNT(*) INTO v_bg_workers 
+    FROM pg_stat_activity 
     WHERE backend_type = 'background worker';
-
+    
     INSERT INTO query_performance.database_health_metrics (
-        database_name, active_connections, max_connections,
+        database_name, active_connections, max_connections, 
         connection_utilization_percent, cache_hit_ratio, dead_tuples,
         autovacuum_running, background_workers_active
     ) VALUES (
@@ -941,7 +942,7 @@ $$ LANGUAGE plpgsql;
 
 -- Health dashboard view
 CREATE OR REPLACE VIEW query_performance.database_health_dashboard AS
-SELECT
+SELECT 
     collected_at,
     database_name,
     active_connections,
@@ -950,7 +951,7 @@ SELECT
     dead_tuples,
     autovacuum_running,
     background_workers_active,
-    CASE
+    CASE 
         WHEN connection_utilization_percent > 80 THEN 'CRITICAL'
         WHEN connection_utilization_percent > 60 THEN 'WARNING'
         WHEN cache_hit_ratio < 90 THEN 'WARNING'
@@ -986,9 +987,9 @@ BEGIN
         schema_name, table_name, index_name, index_type,
         index_size_bytes, scans, tuples_read, tuples_fetched, last_scan
     )
-    SELECT
-        schemaname, tablename, indexname,
-        CASE
+    SELECT 
+        schemaname, tablename, indexname, 
+        CASE 
             WHEN indexdef ILIKE '%btree%' THEN 'BTREE'
             WHEN indexdef ILIKE '%hash%' THEN 'HASH'
             WHEN indexdef ILIKE '%gist%' THEN 'GIST'
@@ -1003,7 +1004,7 @@ BEGIN
         last_idx_scan as last_scan
     FROM pg_stat_user_indexes psi
     JOIN pg_indexes pi ON psi.schemaname = pi.schemaname AND psi.indexname = pi.indexname
-    ON CONFLICT (schema_name, table_name, index_name)
+    ON CONFLICT (schema_name, table_name, index_name) 
     DO UPDATE SET
         scans = EXCLUDED.scans,
         tuples_read = EXCLUDED.tuples_read,
@@ -1015,7 +1016,7 @@ $$ LANGUAGE plpgsql;
 
 -- Unused indexes view
 CREATE OR REPLACE VIEW query_performance.unused_indexes AS
-SELECT
+SELECT 
     schema_name,
     table_name,
     index_name,
@@ -1025,14 +1026,14 @@ SELECT
     tuples_fetched,
     pg_size_pretty(index_size_bytes) as size_pretty
 FROM query_performance.index_performance
-WHERE scans = 0
+WHERE scans = 0 
     AND created_at < NOW() - INTERVAL '30 days'
     AND index_name NOT LIKE '%_pkey'  -- Exclude primary keys
 ORDER BY index_size_bytes DESC;
 
 
---- Query execution plan analysis
--- storing the execution plan
+--- Query execution plan analysis 
+-- storing the execution plan 
 -- Table for execution plan storage
 CREATE TABLE IF NOT EXISTS query_performance.query_execution_plans (
     plan_id SERIAL PRIMARY KEY,
@@ -1048,7 +1049,7 @@ CREATE TABLE IF NOT EXISTS query_performance.query_execution_plans (
 );
 
 
--- Create indexes
+-- Create indexes 
 CREATE INDEX IF NOT EXISTS idx_query_plans_hash ON query_performance.query_execution_plans (query_hash);
 CREATE INDEX IF NOT EXISTS idx_query_plans_time ON query_performance.query_execution_plans (collected_at);
 CREATE INDEX IF NOT EXISTS idx_query_plans_schema_time ON query_performance.query_execution_plans (schema_name, collected_at DESC);
@@ -1084,19 +1085,19 @@ DECLARE
     v_actual_rows BIGINT;
 BEGIN
     v_query_hash := md5(p_query_text);
-
+    
     -- Capture execution plan (this requires proper permissions)
     BEGIN
         EXECUTE 'EXPLAIN (ANALYZE, FORMAT JSON) ' || p_query_text INTO plan_result;
-
+        
         -- Extract metrics from plan
         v_execution_time := (plan_result->0->>'Execution Time')::DECIMAL(12,3);
         v_planning_time := (plan_result->0->>'Planning Time')::DECIMAL(12,3);
         v_actual_rows := (plan_result->0->'Plan'->>'Actual Rows')::BIGINT;
-
+        
         -- Store plan
         INSERT INTO query_performance.query_execution_plans (
-            query_hash, schema_name, plan_json, execution_time_ms,
+            query_hash, schema_name, plan_json, execution_time_ms, 
             planning_time_ms, actual_rows, plan_cost, plan_width
         ) VALUES (
             v_query_hash, p_schema_name, plan_result, v_execution_time,
@@ -1104,7 +1105,7 @@ BEGIN
             (plan_result->0->'Plan'->>'Total Cost')::DECIMAL(12,2),
             (plan_result->0->'Plan'->>'Plan Width')::INTEGER
         ) RETURNING query_execution_plans.plan_id INTO v_plan_id;
-
+        
         RETURN QUERY SELECT v_plan_id, v_execution_time, v_planning_time, v_actual_rows;
     EXCEPTION WHEN OTHERS THEN
         -- Log error but don't fail
@@ -1223,10 +1224,10 @@ BEGIN
         ORDER BY pg_database_size(datname) DESC
         LIMIT 10
     ) recent_usage;
-
+    
     -- Calculate average growth rate (last 30 days)
     WITH usage_trend AS (
-        SELECT
+        SELECT 
             date_trunc('day', collected_at) as day,
             AVG(disk_usage_bytes) as avg_usage
         FROM query_performance.database_health_metrics
@@ -1234,18 +1235,18 @@ BEGIN
         GROUP BY date_trunc('day', collected_at)
         ORDER BY day
     )
-    SELECT
-        CASE
-            WHEN COUNT(*) > 1
+    SELECT 
+        CASE 
+            WHEN COUNT(*) > 1 
             THEN (MAX(avg_usage) - MIN(avg_usage)) / (COUNT(*) * MIN(avg_usage))
-            ELSE 0.01
+            ELSE 0.01 
         END INTO avg_growth_rate
     FROM usage_trend;
-
+    
     -- Project 90 days ahead
     projected_disk_usage := (current_disk_usage * (1 + avg_growth_rate * 90))::BIGINT;
     disk_threshold := (current_disk_usage * 1.5)::BIGINT; -- 50% buffer
-
+    
     INSERT INTO query_performance.capacity_planning (
         metric_type, current_value, projected_value, threshold_value,
         projected_date, confidence_level, recommendation
@@ -1256,8 +1257,8 @@ BEGIN
         disk_threshold,
         CURRENT_DATE + INTERVAL '90 days',
         CASE WHEN avg_growth_rate > 0 THEN 100 - (avg_growth_rate * 1000) ELSE 95 END,
-        CASE
-            WHEN projected_disk_usage > disk_threshold
+        CASE 
+            WHEN projected_disk_usage > disk_threshold 
             THEN 'Plan disk expansion: ' || pg_size_pretty((projected_disk_usage - disk_threshold)::BIGINT)
             ELSE 'Current capacity sufficient'
         END
@@ -1267,7 +1268,7 @@ $$ LANGUAGE plpgsql;
 
 -- Capacity planning dashboard
 CREATE OR REPLACE VIEW query_performance.capacity_dashboard AS
-SELECT
+SELECT 
     metric_type,
     pg_size_pretty(current_value::BIGINT) as current_usage,
     pg_size_pretty(projected_value::BIGINT) as projected_usage,
@@ -1275,7 +1276,7 @@ SELECT
     projected_date,
     confidence_level,
     recommendation,
-    CASE
+    CASE 
         WHEN projected_value > threshold_value THEN 'ACTION REQUIRED'
         WHEN projected_value > threshold_value * 0.8 THEN 'MONITOR CLOSELY'
         ELSE 'HEALTHY'
@@ -1305,7 +1306,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION query_performance.categorize_workload(query_text TEXT)
 RETURNS TEXT AS $$
 BEGIN
-    CASE
+    CASE 
         WHEN query_text ILIKE '%select%count(%' AND query_text !~* 'limit' THEN RETURN 'REPORTING';
         WHEN query_text ILIKE '%join%' AND query_text ILIKE '%group by%' THEN RETURN 'ANALYTICS';
         WHEN length(query_text) < 200 AND query_text ILIKE '%where%id%=%' THEN RETURN 'OLTP';
@@ -1325,7 +1326,7 @@ BEGIN
         avg_execution_time_ms, execution_count, peak_hour, day_of_week,
         seasonal_pattern, resource_intensity
     )
-    SELECT
+    SELECT 
         md5(query_performance.normalize_query_pattern(query_text)) as pattern_hash,
         query_performance.normalize_query_pattern(query_text) as pattern_template,
         query_performance.categorize_workload(query_text) as query_category,
@@ -1333,18 +1334,18 @@ BEGIN
         COUNT(*) as execution_count,
         EXTRACT(HOUR FROM executed_at)::INTEGER as peak_hour,
         EXTRACT(DOW FROM executed_at)::INTEGER as day_of_week,
-        CASE
+        CASE 
             WHEN EXTRACT(DOW FROM executed_at) IN (0,6) THEN 'WEEKEND'
             ELSE 'WEEKDAY'
         END as seasonal_pattern,
-        CASE
+        CASE 
             WHEN AVG(execution_time_ms) > 1000 THEN 'HIGH'
             WHEN AVG(execution_time_ms) > 100 THEN 'MEDIUM'
             ELSE 'LOW'
         END as resource_intensity
     FROM query_performance.query_log
     WHERE executed_at > NOW() - INTERVAL '7 days'
-    GROUP BY
+    GROUP BY 
         md5(query_performance.normalize_query_pattern(query_text)),
         query_performance.normalize_query_pattern(query_text),
         query_performance.categorize_workload(query_text),
@@ -1353,7 +1354,7 @@ BEGIN
     ON CONFLICT (pattern_hash)
     DO UPDATE SET
         avg_execution_time_ms = (
-            (query_performance.workload_patterns.avg_execution_time_ms * query_performance.workload_patterns.execution_count) +
+            (query_performance.workload_patterns.avg_execution_time_ms * query_performance.workload_patterns.execution_count) + 
             (EXCLUDED.avg_execution_time_ms * EXCLUDED.execution_count)
         ) / (query_performance.workload_patterns.execution_count + EXCLUDED.execution_count),
         execution_count = query_performance.workload_patterns.execution_count + EXCLUDED.execution_count,
@@ -1363,7 +1364,7 @@ $$ LANGUAGE plpgsql;
 
 -- Workload analysis dashboard
 CREATE OR REPLACE VIEW query_performance.workload_analysis AS
-SELECT
+SELECT 
     query_category,
     COUNT(*) as pattern_count,
     SUM(execution_count) as total_executions,
@@ -1384,7 +1385,7 @@ DECLARE
 BEGIN
     -- Find slow queries with WHERE clauses but no matching indexes
     FOR slow_query_rec IN
-        SELECT
+        SELECT 
             query_hash,
             schema_name,
             query_text,
@@ -1400,12 +1401,12 @@ BEGIN
     LOOP
         -- Simple recommendation logic (enhance with more sophisticated analysis)
         INSERT INTO query_performance.tuning_recommendations (
-            recommendation_type, target_object,
+            recommendation_type, target_object, 
             current_state, recommended_action,
             expected_improvement_percent, implementation_difficulty,
             priority_score
         )
-        SELECT
+        SELECT 
             'INDEX',
             slow_query_rec.schema_name || '.' || unnest(slow_query_rec.tables_used),
             jsonb_build_object(
@@ -1416,7 +1417,7 @@ BEGIN
             'Consider creating index on columns used in WHERE clause',
             60.0, -- Estimated 60% improvement
             'EASY',
-            CASE
+            CASE 
                 WHEN slow_query_rec.execution_time_ms > 5000 THEN 10
                 WHEN slow_query_rec.execution_time_ms > 1000 THEN 7
                 ELSE 5
@@ -1433,7 +1434,7 @@ $$ LANGUAGE plpgsql;
 
 -- Comprehensive tuning dashboard
 CREATE OR REPLACE VIEW query_performance.tuning_dashboard AS
-SELECT
+SELECT 
     recommendation_type,
     COUNT(*) as recommendation_count,
     AVG(expected_improvement_percent) as avg_expected_improvement,
@@ -1462,9 +1463,9 @@ BEGIN
     FROM query_performance.query_log
     WHERE executed_at > NOW() - INTERVAL '5 minutes'
     GROUP BY schema_name
-
+    
     UNION ALL
-
+    
     SELECT format(
         'db_active_connections %s %s',
         active_connections,
@@ -1489,7 +1490,7 @@ $$ LANGUAGE plpgsql;
 --     -- This would integrate with actual external systems
 --     -- For now, just log the alert
 --     RAISE NOTICE 'EXTERNAL ALERT [%] to %: %', alert_level, target_system, alert_message;
-
+    
 --     -- In production, you would:
 --     -- 1. Get webhook URL from configuration
 --     -- 2. Make HTTP call to external system
@@ -1498,7 +1499,7 @@ $$ LANGUAGE plpgsql;
 -- $$ LANGUAGE plpgsql;
 
 
---support of multiple database instance mnitoring
+--support of multiple database instance mnitoring 
 -- Table for monitoring multiple database instances
 CREATE TABLE IF NOT EXISTS query_performance.database_instances (
     instance_id SERIAL PRIMARY KEY,
@@ -1515,7 +1516,7 @@ CREATE TABLE IF NOT EXISTS query_performance.database_instances (
 );
 
 -- Enhanced health metrics to include instance tracking
-ALTER TABLE query_performance.database_health_metrics
+ALTER TABLE query_performance.database_health_metrics 
 ADD COLUMN IF NOT EXISTS instance_id INTEGER REFERENCES query_performance.database_instances(instance_id);
 
 -- Function to register database instances
@@ -1536,7 +1537,7 @@ BEGIN
     ) VALUES (
         p_instance_name, p_host_name, p_port, p_instance_type, p_environment, p_region
     )
-    ON CONFLICT (instance_name)
+    ON CONFLICT (instance_name) 
     DO UPDATE SET
         host_name = EXCLUDED.host_name,
         port = EXCLUDED.port,
@@ -1545,12 +1546,12 @@ BEGIN
         region = EXCLUDED.region,
         last_seen = CURRENT_TIMESTAMP
     RETURNING instance_id INTO v_instance_id;
-
+    
     RETURN v_instance_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- query performance regression detection
+-- query performance regression detection 
 -- Table for storing query performance history
 CREATE TABLE IF NOT EXISTS query_performance.query_performance_history (
     history_id SERIAL PRIMARY KEY,
@@ -1580,7 +1581,7 @@ RETURNS TABLE(
 BEGIN
     RETURN QUERY
     WITH current_period AS (
-        SELECT
+        SELECT 
             query_hash,
             schema_name,
             AVG(execution_time_ms) as avg_time
@@ -1589,7 +1590,7 @@ BEGIN
         GROUP BY query_hash, schema_name
     ),
     previous_period AS (
-        SELECT
+        SELECT 
             query_hash,
             schema_name,
             AVG(execution_time_ms) as avg_time
@@ -1598,13 +1599,13 @@ BEGIN
             AND executed_at < CURRENT_DATE - INTERVAL '1 day'
         GROUP BY query_hash, schema_name
     )
-    SELECT
+    SELECT 
         c.query_hash,
         c.schema_name,
         c.avg_time as current_avg_time,
         p.avg_time as previous_avg_time,
         ROUND(((c.avg_time - p.avg_time) / p.avg_time) * 100, 2) as regression_percent,
-        CASE
+        CASE 
             WHEN ((c.avg_time - p.avg_time) / p.avg_time) * 100 > regression_threshold_percent * 2 THEN 'SEVERE'
             WHEN ((c.avg_time - p.avg_time) / p.avg_time) * 100 > regression_threshold_percent THEN 'MODERATE'
             ELSE 'MILD'
@@ -1647,14 +1648,14 @@ BEGIN
             'Investigate performance regression for query pattern',
             regression_rec.regression_percent,
             'MEDIUM',
-            CASE
+            CASE 
                 WHEN regression_rec.regression_severity = 'SEVERE' THEN 9
                 WHEN regression_rec.regression_severity = 'MODERATE' THEN 7
                 ELSE 5
             END,
             'PENDING'
         );
-
+        
         -- Send alert for severe regressions
         IF regression_rec.regression_severity = 'SEVERE' THEN
             PERFORM query_performance.send_external_alert(
@@ -1694,7 +1695,7 @@ DECLARE
 BEGIN
     -- Find queries that could benefit from rewriting
     FOR slow_query_rec IN
-        SELECT
+        SELECT 
             query_hash,
             schema_name,
             query_text,
@@ -1729,7 +1730,7 @@ BEGIN
             )
             ON CONFLICT DO NOTHING;
         END IF;
-
+        
         -- Suggest EXISTS to JOIN conversion
         IF slow_query_rec.query_text ILIKE '%not exists%' THEN
             INSERT INTO query_performance.query_rewrite_suggestions (
@@ -1757,7 +1758,7 @@ $$ LANGUAGE plpgsql;
 
 -- View for query rewrite opportunities
 CREATE OR REPLACE VIEW query_performance.query_rewrite_opportunities AS
-SELECT
+SELECT 
     rewrite_pattern,
     COUNT(*) as suggestion_count,
     AVG(expected_performance_gain_percent) as avg_gain_percent,
@@ -1815,7 +1816,7 @@ BEGIN
             'MEMORY'
         ) ON CONFLICT DO NOTHING;
     END IF;
-
+    
     -- Check work_mem setting
     SELECT setting INTO current_setting FROM pg_settings WHERE name = 'work_mem';
     IF current_setting.setting::INTEGER < 4096 THEN -- Less than 4MB
@@ -1831,7 +1832,7 @@ BEGIN
             'MEMORY'
         ) ON CONFLICT DO NOTHING;
     END IF;
-
+    
     -- Check max_connections setting
     SELECT setting INTO current_setting FROM pg_settings WHERE name = 'max_connections';
     IF current_setting.setting::INTEGER > 200 THEN
@@ -1852,7 +1853,7 @@ $$ LANGUAGE plpgsql;
 
 -- Configuration dashboard
 CREATE OR REPLACE VIEW query_performance.config_dashboard AS
-SELECT
+SELECT 
     category,
     COUNT(*) as recommendation_count,
     string_agg(parameter_name || ': ' || current_value || ' → ' || recommended_value, '; ') as changes,
@@ -1860,10 +1861,10 @@ SELECT
     COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_count
 FROM query_performance.config_recommendations
 GROUP BY category
-ORDER BY
+ORDER BY 
     MAX(CASE WHEN impact_level = 'CRITICAL' THEN 1 WHEN impact_level = 'HIGH' THEN 2 WHEN impact_level = 'MEDIUM' THEN 3 ELSE 4 END);
-
-
+	
+	
 -- Enhanced alert configurations
 CREATE TABLE IF NOT EXISTS query_performance.alert_rules (
     rule_id SERIAL PRIMARY KEY,
@@ -1905,7 +1906,7 @@ BEGIN
     LOOP
         alert_triggered := FALSE;
         alert_message := '';
-
+        
         -- Evaluate different types of conditions
         CASE rule_rec.metric_type
             WHEN 'QUERY_PERFORMANCE' THEN
@@ -1917,7 +1918,7 @@ BEGIN
                     alert_triggered := TRUE;
                     alert_message := format('Slow queries detected: execution time > %s ms', rule_rec.threshold_value);
                 END IF;
-
+                
             WHEN 'DATABASE_HEALTH' THEN
                 IF EXISTS (
                     SELECT 1 FROM query_performance.database_health_metrics
@@ -1925,11 +1926,11 @@ BEGIN
                         AND connection_utilization_percent > rule_rec.threshold_value
                 ) THEN
                     alert_triggered := TRUE;
-                    alert_message := format('High connection utilization: %s%% > %s%%',
+                    alert_message := format('High connection utilization: %s%% > %s%%', 
                                           (SELECT MAX(connection_utilization_percent) FROM query_performance.database_health_metrics),
                                           rule_rec.threshold_value);
                 END IF;
-
+                
             WHEN 'INDEX_PERFORMANCE' THEN
                 IF EXISTS (
                     SELECT 1 FROM query_performance.index_performance
@@ -1939,7 +1940,7 @@ BEGIN
                     alert_message := 'Unused indexes detected that may impact performance';
                 END IF;
         END CASE;
-
+        
         -- Trigger alert if condition met
         IF alert_triggered THEN
             INSERT INTO query_performance.alert_history (
@@ -1949,11 +1950,11 @@ BEGIN
                 alert_message,
                 jsonb_build_object('threshold', rule_rec.threshold_value, 'severity', rule_rec.severity)
             );
-
-            UPDATE query_performance.alert_rules
-            SET last_triggered = CURRENT_TIMESTAMP
+            
+            UPDATE query_performance.alert_rules 
+            SET last_triggered = CURRENT_TIMESTAMP 
             WHERE rule_id = rule_rec.rule_id;
-
+            
             -- Send notifications (simplified)
             PERFORM query_performance.send_external_alert(
                 alert_message,
@@ -1970,19 +1971,19 @@ INSERT INTO query_performance.alert_rules (
     rule_name, rule_description, metric_type, condition_expression,
     threshold_value, duration, severity, notification_channels
 ) VALUES
-    ('slow_queries', 'Alert on queries taking longer than 2 seconds',
+    ('slow_queries', 'Alert on queries taking longer than 2 seconds', 
      'QUERY_PERFORMANCE', 'execution_time_ms > 2000',
      2000, INTERVAL '5 minutes', 'WARNING', ARRAY['SLACK', 'EMAIL']),
-
+     
     ('high_connections', 'Alert on high database connection utilization',
      'DATABASE_HEALTH', 'connection_utilization_percent > 80',
      80, INTERVAL '10 minutes', 'CRITICAL', ARRAY['SLACK', 'SMS']),
-
+     
     ('unused_indexes', 'Alert on unused indexes that waste resources',
      'INDEX_PERFORMANCE', 'scans = 0',
      0, INTERVAL '1 day', 'INFO', ARRAY['EMAIL']);
-
-
+	 
+	 
 -- Table for performance benchmarks
 CREATE TABLE IF NOT EXISTS query_performance.benchmarks (
     benchmark_id SERIAL PRIMARY KEY,
@@ -2020,18 +2021,18 @@ DECLARE
 BEGIN
     FOR i IN 1..p_iterations LOOP
         start_time := clock_timestamp();
-
+        
         -- Execute the query
         EXECUTE 'EXPLAIN (ANALYZE, FORMAT JSON) ' || p_query_text INTO plan_time;
-
+        
         end_time := clock_timestamp();
         exec_time := EXTRACT(EPOCH FROM (end_time - start_time)) * 1000;
-
+        
         -- Get row count
         GET DIAGNOSTICS rows_ret = ROW_COUNT;
-
+        
         RETURN QUERY SELECT i, exec_time, plan_time, rows_ret;
-
+        
         -- Store in benchmarks table
         INSERT INTO query_performance.benchmarks (
             benchmark_name, benchmark_type, target_object,
@@ -2052,7 +2053,7 @@ $$ LANGUAGE plpgsql;
 
 -- Benchmark comparison view
 CREATE OR REPLACE VIEW query_performance.benchmark_comparison AS
-SELECT
+SELECT 
     benchmark_name,
     COUNT(*) as test_runs,
     AVG((current_metrics->>'execution_time_ms')::DECIMAL) as avg_execution_time,
@@ -2093,15 +2094,15 @@ DECLARE
 BEGIN
     -- Count tables
     SELECT array_length(query_performance.extract_table_names(query_text), 1) INTO table_count;
-
+    
     -- Count JOINs
     SELECT COUNT(*) INTO join_count FROM regexp_matches(lower(query_text), '\s+join\s+', 'g');
-
+    
     -- Check for clauses
     where_clause_present := lower(query_text) ~ '\s+where\s+';
     group_by_present := lower(query_text) ~ '\s+group\s+by\s+';
     having_present := lower(query_text) ~ '\s+having\s+';
-
+    
     features := jsonb_build_object(
         'table_count', COALESCE(table_count, 0),
         'join_count', join_count,
@@ -2111,7 +2112,7 @@ BEGIN
         'query_length', length(query_text),
         'subquery_count', (SELECT COUNT(*) FROM regexp_matches(lower(query_text), '\(\s*select', 'g'))
     );
-
+    
     RETURN features;
 END;
 $$ LANGUAGE plpgsql;
@@ -2123,10 +2124,10 @@ CREATE OR REPLACE FUNCTION query_performance.prepare_ml_training_data(
 RETURNS VOID AS $$
 BEGIN
     INSERT INTO query_performance.ml_training_data (
-        query_hash, query_features, execution_time_ms,
+        query_hash, query_features, execution_time_ms, 
         query_complexity_score, historical_context
     )
-    SELECT
+    SELECT 
         query_hash,
         query_performance.extract_ml_features(query_text) as query_features,
         execution_time_ms,
@@ -2145,3 +2146,590 @@ $$ LANGUAGE plpgsql;
 
 
 ---distributed query monitoring and tracing todo
+-- Table for distributed query tracking
+CREATE TABLE IF NOT EXISTS query_performance.distributed_queries (
+    trace_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parent_trace_id UUID,
+    query_id TEXT NOT NULL,
+    service_name TEXT NOT NULL,
+    operation_name TEXT,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE,
+    duration_ms DECIMAL(12,3),
+    status TEXT, -- SUCCESS, ERROR, TIMEOUT
+    error_message TEXT,
+    tags JSONB,
+    logs JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for cross-database query correlation
+CREATE TABLE IF NOT EXISTS query_performance.cross_database_queries (
+    correlation_id SERIAL PRIMARY KEY,
+    trace_id UUID NOT NULL,
+    source_database TEXT NOT NULL,
+    target_database TEXT NOT NULL,
+    query_text TEXT,
+    execution_time_ms DECIMAL(12,3),
+    data_transferred_bytes BIGINT,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Function to start distributed query trace
+CREATE OR REPLACE FUNCTION query_performance.start_distributed_trace(
+    p_query_id TEXT,
+    p_service_name TEXT,
+    p_operation_name TEXT DEFAULT NULL,
+    p_parent_trace_id UUID DEFAULT NULL,
+    p_tags JSONB DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+    v_trace_id UUID;
+BEGIN
+    v_trace_id := gen_random_uuid();
+    
+    INSERT INTO query_performance.distributed_queries (
+        trace_id, parent_trace_id, query_id, service_name, 
+        operation_name, start_time, status, tags
+    ) VALUES (
+        v_trace_id, p_parent_trace_id, p_query_id, p_service_name,
+        p_operation_name, CURRENT_TIMESTAMP, 'RUNNING', p_tags
+    );
+    
+    RETURN v_trace_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to end distributed query trace
+CREATE OR REPLACE FUNCTION query_performance.end_distributed_trace(
+    p_trace_id UUID,
+    p_status TEXT DEFAULT 'SUCCESS',
+    p_error_message TEXT DEFAULT NULL,
+    p_execution_time_ms DECIMAL(12,3) DEFAULT NULL,
+    p_logs JSONB DEFAULT NULL
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE query_performance.distributed_queries
+    SET 
+        end_time = CURRENT_TIMESTAMP,
+        duration_ms = COALESCE(p_execution_time_ms, 
+                              EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - start_time)) * 1000),
+        status = p_status,
+        error_message = p_error_message,
+        logs = p_logs
+    WHERE trace_id = p_trace_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Distributed query performance view
+CREATE OR REPLACE VIEW query_performance.distributed_query_performance AS
+SELECT 
+    service_name,
+    operation_name,
+    COUNT(*) as query_count,
+    AVG(duration_ms) as avg_duration_ms,
+    MAX(duration_ms) as max_duration_ms,
+    MIN(duration_ms) as min_duration_ms,
+    COUNT(CASE WHEN status != 'SUCCESS' THEN 1 END) as error_count,
+    ROUND(COUNT(CASE WHEN status != 'SUCCESS' THEN 1 END) * 100.0 / COUNT(*), 2) as error_rate_percent
+FROM query_performance.distributed_queries
+WHERE start_time > NOW() - INTERVAL '1 hour'
+GROUP BY service_name, operation_name
+ORDER BY avg_duration_ms DESC;
+
+
+--- advanced resource governance and workload management 
+-- Table for resource pools and workload management
+CREATE TABLE IF NOT EXISTS query_performance.resource_pools (
+    pool_id SERIAL PRIMARY KEY,
+    pool_name TEXT UNIQUE NOT NULL,
+    max_cpu_percent INTEGER DEFAULT 100,
+    max_memory_percent INTEGER DEFAULT 100,
+    max_concurrent_queries INTEGER,
+    priority_level INTEGER DEFAULT 5, -- 1-10, 10 being highest
+    allowed_users TEXT[], -- NULL means all users
+    allowed_schemas TEXT[], -- NULL means all schemas
+    query_timeouts INTERVAL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for workload classification rules
+CREATE TABLE IF NOT EXISTS query_performance.workload_classification_rules (
+    rule_id SERIAL PRIMARY KEY,
+    rule_name TEXT UNIQUE NOT NULL,
+    rule_order INTEGER DEFAULT 1,
+    condition_pattern TEXT, -- Regex pattern to match queries
+    target_pool_id INTEGER REFERENCES query_performance.resource_pools(pool_id),
+    assigned_priority INTEGER DEFAULT 5,
+    enforcement_action TEXT DEFAULT 'ROUTE', -- ROUTE, REJECT, DELAY
+    enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for active resource allocations
+CREATE TABLE IF NOT EXISTS query_performance.active_resource_allocations (
+    allocation_id SERIAL PRIMARY KEY,
+    pool_id INTEGER REFERENCES query_performance.resource_pools(pool_id),
+    query_hash TEXT,
+    allocated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    resource_usage JSONB
+);
+
+-- Function to classify and route queries
+CREATE OR REPLACE FUNCTION query_performance.classify_and_route_query(
+    p_query_text TEXT,
+    p_user_name TEXT,
+    p_schema_name TEXT
+)
+RETURNS TABLE(
+    pool_name TEXT,
+    priority_level INTEGER,
+    max_execution_time INTERVAL,
+    enforcement_action TEXT
+) AS $$
+DECLARE
+    rule_rec RECORD;
+BEGIN
+    -- Find matching classification rule
+    FOR rule_rec IN
+        SELECT wcr.*, rp.pool_name, rp.priority_level, rp.query_timeouts
+        FROM query_performance.workload_classification_rules wcr
+        JOIN query_performance.resource_pools rp ON wcr.target_pool_id = rp.pool_id
+        WHERE wcr.enabled = TRUE
+            AND (wcr.condition_pattern IS NULL OR p_query_text ~* wcr.condition_pattern)
+            AND (rp.allowed_users IS NULL OR p_user_name = ANY(rp.allowed_users))
+            AND (rp.allowed_schemas IS NULL OR p_schema_name = ANY(rp.allowed_schemas))
+        ORDER BY wcr.rule_order
+        LIMIT 1
+    LOOP
+        RETURN QUERY SELECT 
+            rule_rec.pool_name,
+            rule_rec.priority_level,
+            rule_rec.query_timeouts,
+            rule_rec.enforcement_action;
+        RETURN;
+    END LOOP;
+    
+    -- Default to system pool if no rules match
+    RETURN QUERY SELECT 
+        'DEFAULT'::TEXT,
+        5::INTEGER,
+        INTERVAL '30 minutes'::INTERVAL,
+        'ROUTE'::TEXT;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Resource utilization monitoring
+CREATE OR REPLACE VIEW query_performance.resource_utilization AS
+SELECT 
+    rp.pool_name,
+    COUNT(ara.allocation_id) as active_queries,
+    rp.max_concurrent_queries,
+    ROUND(COUNT(ara.allocation_id) * 100.0 / rp.max_concurrent_queries, 2) as utilization_percent,
+    AVG(rp.priority_level) as avg_priority,
+    MAX(ara.allocated_at) as last_allocation
+FROM query_performance.resource_pools rp
+LEFT JOIN query_performance.active_resource_allocations ara 
+    ON rp.pool_id = ara.pool_id 
+    AND ara.expires_at > CURRENT_TIMESTAMP
+GROUP BY rp.pool_name, rp.max_concurrent_queries
+ORDER BY utilization_percent DESC;
+
+
+
+-- security compliance monitoring 
+-- Table for security audit logging
+CREATE TABLE IF NOT EXISTS query_performance.security_audit_log (
+    audit_id SERIAL PRIMARY KEY,
+    user_name TEXT NOT NULL,
+    client_ip INET,
+    query_text TEXT,
+    query_type TEXT,
+    accessed_tables TEXT[],
+    sensitive_data_accessed BOOLEAN DEFAULT FALSE,
+    access_level TEXT, -- READ, WRITE, ADMIN
+    compliance_check_result TEXT, -- PASSED, FAILED, REVIEW
+    risk_score INTEGER, -- 1-10
+    session_id TEXT,
+    application_name TEXT,
+    executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    audit_notes TEXT
+);
+
+-- Table for data sensitivity classification
+CREATE TABLE IF NOT EXISTS query_performance.data_sensitivity_classification (
+    classification_id SERIAL PRIMARY KEY,
+    schema_name TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    column_name TEXT,
+    sensitivity_level TEXT NOT NULL, -- PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED
+    data_category TEXT, -- PII, PCI, PHI, FINANCIAL, etc.
+    retention_policy TEXT,
+    access_controls TEXT[],
+    last_reviewed TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(schema_name, table_name, column_name)
+);
+
+-- Function to perform security audit
+CREATE OR REPLACE FUNCTION query_performance.perform_security_audit(
+    p_user_name TEXT,
+    p_query_text TEXT,
+    p_client_ip INET DEFAULT NULL,
+    p_session_id TEXT DEFAULT NULL,
+    p_application_name TEXT DEFAULT NULL
+)
+RETURNS TABLE(
+    compliance_status TEXT,
+    risk_score INTEGER,
+    sensitive_data_accessed BOOLEAN,
+    audit_notes TEXT
+) AS $$
+DECLARE
+    v_query_type TEXT;
+    v_tables_accessed TEXT[];
+    v_sensitive_access BOOLEAN := FALSE;
+    v_risk_score INTEGER := 1;
+    v_compliance_status TEXT := 'PASSED';
+    v_audit_notes TEXT := '';
+    v_table_rec RECORD;
+BEGIN
+    -- Determine query type
+    v_query_type := query_performance.get_query_type(p_query_text);
+    
+    -- Extract tables accessed
+    v_tables_accessed := query_performance.extract_table_names(p_query_text);
+    
+    -- Check for sensitive data access
+    FOR v_table_rec IN
+        SELECT DISTINCT schema_name, table_name
+        FROM unnest(v_tables_accessed) as table_name
+        CROSS JOIN (SELECT schemaname FROM pg_tables WHERE tablename = table_name LIMIT 1) as schema_name
+        JOIN query_performance.data_sensitivity_classification dsc 
+            ON dsc.schema_name = schema_name.schemaname 
+            AND dsc.table_name = table_name
+        WHERE dsc.sensitivity_level IN ('CONFIDENTIAL', 'RESTRICTED')
+    LOOP
+        v_sensitive_access := TRUE;
+        v_risk_score := v_risk_score + 3;
+        v_audit_notes := v_audit_notes || format('Access to sensitive table: %s.%s; ', 
+                                               v_table_rec.schema_name, v_table_rec.table_name);
+    END LOOP;
+    
+    -- Risk scoring based on query type
+    CASE v_query_type
+        WHEN 'DELETE' THEN v_risk_score := v_risk_score + 2;
+        WHEN 'UPDATE' THEN v_risk_score := v_risk_score + 1;
+        WHEN 'DROP' THEN v_risk_score := v_risk_score + 5;
+        WHEN 'CREATE' THEN v_risk_score := v_risk_score + 1;
+        ELSE v_risk_score := v_risk_score + 0;
+    END CASE;
+    
+    -- Check for potentially dangerous patterns
+    IF p_query_text ~* '\b(delete|drop|truncate)\s+.*\b(all|where\s+1=1)\b' THEN
+        v_risk_score := v_risk_score + 5;
+        v_compliance_status := 'FAILED';
+        v_audit_notes := v_audit_notes || 'Potentially dangerous query pattern detected; ';
+    END IF;
+    
+    -- Cap risk score
+    v_risk_score := LEAST(v_risk_score, 10);
+    
+    -- Log the audit
+    INSERT INTO query_performance.security_audit_log (
+        user_name, client_ip, query_text, query_type, accessed_tables,
+        sensitive_data_accessed, risk_score, compliance_check_result,
+        session_id, application_name, audit_notes
+    ) VALUES (
+        p_user_name, p_client_ip, p_query_text, v_query_type, v_tables_accessed,
+        v_sensitive_access, v_risk_score, v_compliance_status,
+        p_session_id, p_application_name, v_audit_notes
+    );
+    
+    RETURN QUERY SELECT v_compliance_status, v_risk_score, v_sensitive_access, v_audit_notes;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Security compliance dashboard 
+CREATE OR REPLACE VIEW query_performance.security_compliance_dashboard AS
+SELECT 
+    audit_date,
+    total_queries,
+    sensitive_access_count,
+    failed_compliance_count,
+    avg_risk_score,
+    string_agg(DISTINCT table_name, ', ') as accessed_tables
+FROM (
+    SELECT 
+        DATE_TRUNC('day', executed_at) as audit_date,
+        COUNT(*) as total_queries,
+        COUNT(CASE WHEN sensitive_data_accessed THEN 1 END) as sensitive_access_count,
+        COUNT(CASE WHEN compliance_check_result = 'FAILED' THEN 1 END) as failed_compliance_count,
+        AVG(risk_score) as avg_risk_score,
+        unnest(accessed_tables) as table_name
+    FROM query_performance.security_audit_log
+    WHERE executed_at > NOW() - INTERVAL '7 days'
+    GROUP BY DATE_TRUNC('day', executed_at), accessed_tables
+) sub
+GROUP BY audit_date, total_queries, sensitive_access_count, failed_compliance_count, avg_risk_score
+ORDER BY audit_date DESC;
+
+
+-- Security compliance dashboard  with LATERAL join
+CREATE OR REPLACE VIEW query_performance.security_compliance_dashboard AS
+SELECT 
+    DATE_TRUNC('day', sal.executed_at) as audit_date,
+    COUNT(*) as total_queries,
+    COUNT(CASE WHEN sal.sensitive_data_accessed THEN 1 END) as sensitive_access_count,
+    COUNT(CASE WHEN sal.compliance_check_result = 'FAILED' THEN 1 END) as failed_compliance_count,
+    AVG(sal.risk_score) as avg_risk_score,
+    string_agg(DISTINCT at.table_name, ', ') as accessed_tables
+FROM query_performance.security_audit_log sal
+LEFT JOIN LATERAL unnest(sal.accessed_tables) as at(table_name) ON TRUE
+WHERE sal.executed_at > NOW() - INTERVAL '7 days'
+GROUP BY DATE_TRUNC('day', sal.executed_at)
+ORDER BY audit_date DESC;
+
+
+
+-- Security compliance dashboard simplified
+CREATE OR REPLACE VIEW query_performance.security_compliance_dashboard_simplified AS
+SELECT 
+    DATE_TRUNC('day', executed_at) as audit_date,
+    COUNT(*) as total_queries,
+    COUNT(CASE WHEN sensitive_data_accessed THEN 1 END) as sensitive_access_count,
+    COUNT(CASE WHEN compliance_check_result = 'FAILED' THEN 1 END) as failed_compliance_count,
+    AVG(risk_score) as avg_risk_score
+FROM query_performance.security_audit_log
+WHERE executed_at > NOW() - INTERVAL '7 days'
+GROUP BY DATE_TRUNC('day', executed_at)
+ORDER BY audit_date DESC;
+
+
+
+-- Accessed tables summary view
+CREATE OR REPLACE VIEW query_performance.accessed_tables_summary AS
+SELECT 
+    DATE_TRUNC('day', sal.executed_at) as audit_date,
+    at.table_name,
+    COUNT(*) as access_count
+FROM query_performance.security_audit_log sal,
+     unnest(sal.accessed_tables) as at(table_name)
+WHERE sal.executed_at > NOW() - INTERVAL '7 days'
+GROUP BY DATE_TRUNC('day', sal.executed_at), at.table_name
+ORDER BY audit_date DESC, access_count DESC;
+
+-- advanced backup and recovery performance monitoring 
+
+-- Table for backup/recovery performance tracking
+CREATE TABLE IF NOT EXISTS query_performance.backup_recovery_metrics (
+    metric_id SERIAL PRIMARY KEY,
+    operation_type TEXT NOT NULL, -- BACKUP, RESTORE, ARCHIVE, WAL
+    database_name TEXT,
+    backup_set_id TEXT,
+    start_time TIMESTAMP WITH TIME ZONE,
+    end_time TIMESTAMP WITH TIME ZONE,
+    duration_seconds DECIMAL(12,3),
+    data_size_bytes BIGINT,
+    compressed_size_bytes BIGINT,
+    compression_ratio DECIMAL(8,2),
+    throughput_mb_per_sec DECIMAL(12,2),
+    status TEXT, -- SUCCESS, FAILED, IN_PROGRESS
+    error_message TEXT,
+    backup_type TEXT, -- FULL, INCREMENTAL, DIFFERENTIAL
+    retention_days INTEGER,
+    storage_location TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for backup schedule and SLA tracking
+CREATE TABLE IF NOT EXISTS query_performance.backup_sla_tracking (
+    sla_id SERIAL PRIMARY KEY,
+    database_name TEXT NOT NULL,
+    backup_type TEXT NOT NULL,
+    expected_frequency INTERVAL NOT NULL,
+    rto_hours INTEGER, -- Recovery Time Objective
+    rpo_hours INTEGER, -- Recovery Point Objective
+    last_backup_time TIMESTAMP WITH TIME ZONE,
+    next_backup_due TIMESTAMP WITH TIME ZONE,
+    sla_status TEXT, -- MET, AT_RISK, VIOLATED
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Function to log backup performance
+CREATE OR REPLACE FUNCTION query_performance.log_backup_performance(
+    p_operation_type TEXT,
+    p_database_name TEXT,
+    p_backup_set_id TEXT,
+    p_start_time TIMESTAMP WITH TIME ZONE,
+    p_end_time TIMESTAMP WITH TIME ZONE,
+    p_data_size_bytes BIGINT,
+    p_compressed_size_bytes BIGINT DEFAULT NULL,
+    p_status TEXT DEFAULT 'SUCCESS',
+    p_error_message TEXT DEFAULT NULL,
+    p_backup_type TEXT DEFAULT 'FULL',
+    p_storage_location TEXT DEFAULT 'LOCAL'
+)
+RETURNS VOID AS $$
+DECLARE
+    v_duration DECIMAL(12,3);
+    v_throughput DECIMAL(12,2);
+    v_compression_ratio DECIMAL(8,2);
+BEGIN
+    v_duration := EXTRACT(EPOCH FROM (p_end_time - p_start_time));
+    v_throughput := CASE 
+        WHEN v_duration > 0 THEN (p_data_size_bytes / 1024.0 / 1024.0) / (v_duration / 60.0)
+        ELSE 0 
+    END;
+    v_compression_ratio := CASE 
+        WHEN p_compressed_size_bytes > 0 THEN p_data_size_bytes::DECIMAL / p_compressed_size_bytes
+        ELSE 1.0 
+    END;
+    
+    INSERT INTO query_performance.backup_recovery_metrics (
+        operation_type, database_name, backup_set_id, start_time, end_time,
+        duration_seconds, data_size_bytes, compressed_size_bytes,
+        compression_ratio, throughput_mb_per_sec, status, error_message,
+        backup_type, storage_location
+    ) VALUES (
+        p_operation_type, p_database_name, p_backup_set_id, p_start_time, p_end_time,
+        v_duration, p_data_size_bytes, p_compressed_size_bytes,
+        v_compression_ratio, v_throughput, p_status, p_error_message,
+        p_backup_type, p_storage_location
+    );
+    
+    -- Update SLA tracking
+    UPDATE query_performance.backup_sla_tracking
+    SET 
+        last_backup_time = p_end_time,
+        next_backup_due = p_end_time + expected_frequency,
+        sla_status = CASE 
+            WHEN p_status = 'SUCCESS' THEN 'MET'
+            ELSE 'VIOLATED'
+        END
+    WHERE database_name = p_database_name AND backup_type = p_backup_type;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Backup performance dashboard
+CREATE OR REPLACE VIEW query_performance.backup_performance_dashboard AS
+SELECT 
+    database_name,
+    backup_type,
+    COUNT(*) as backup_count,
+    AVG(duration_seconds) as avg_duration_seconds,
+    AVG(throughput_mb_per_sec) as avg_throughput_mb_per_sec,
+    AVG(compression_ratio) as avg_compression_ratio,
+    MAX(data_size_bytes) as max_backup_size_bytes,
+    COUNT(CASE WHEN status = 'FAILED' THEN 1 END) as failed_backups,
+    ROUND(COUNT(CASE WHEN status = 'FAILED' THEN 1 END) * 100.0 / COUNT(*), 2) as failure_rate_percent
+FROM query_performance.backup_recovery_metrics
+WHERE start_time > NOW() - INTERVAL '30 days'
+GROUP BY database_name, backup_type
+ORDER BY avg_duration_seconds DESC;
+
+
+-- Cost optimization 
+
+-- Table for resource cost tracking
+CREATE TABLE IF NOT EXISTS query_performance.resource_costs (
+    cost_id SERIAL PRIMARY KEY,
+    resource_type TEXT NOT NULL, -- COMPUTE, STORAGE, NETWORK
+    cost_category TEXT NOT NULL, -- QUERY_EXECUTION, STORAGE, BACKUP, etc.
+    cost_amount DECIMAL(12,4),
+    currency_code TEXT DEFAULT 'USD',
+    billing_period DATE,
+    allocated_to TEXT, -- User, Department, Project, Application
+    tags JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for query cost attribution
+CREATE TABLE IF NOT EXISTS query_performance.query_cost_attribution (
+    attribution_id SERIAL PRIMARY KEY,
+    query_hash TEXT NOT NULL,
+    user_name TEXT,
+    application_name TEXT,
+    department TEXT,
+    project_code TEXT,
+    compute_cost DECIMAL(12,4),
+    storage_cost DECIMAL(12,4),
+    network_cost DECIMAL(12,4),
+    total_cost DECIMAL(12,4),
+    execution_time_ms DECIMAL(12,3),
+    rows_processed BIGINT,
+    cost_per_row DECIMAL(12,6),
+    cost_per_second DECIMAL(12,6),
+    executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Function to calculate query costs
+CREATE OR REPLACE FUNCTION query_performance.calculate_query_costs(
+    p_query_hash TEXT,
+    p_execution_time_ms DECIMAL(12,3),
+    p_rows_processed BIGINT,
+    p_user_name TEXT DEFAULT NULL,
+    p_application_name TEXT DEFAULT NULL
+)
+RETURNS TABLE(
+    compute_cost DECIMAL(12,4),
+    storage_cost DECIMAL(12,4),
+    network_cost DECIMAL(12,4),
+    total_cost DECIMAL(12,4)
+) AS $$
+DECLARE
+    v_compute_rate DECIMAL(12,6) := 0.0001; -- $0.0001 per millisecond
+    v_storage_rate DECIMAL(12,6) := 0.0000001; -- $0.0000001 per row processed
+    v_network_rate DECIMAL(12,6) := 0.000001; -- $0.000001 per row for network
+    v_compute_cost DECIMAL(12,4);
+    v_storage_cost DECIMAL(12,4);
+    v_network_cost DECIMAL(12,4);
+    v_total_cost DECIMAL(12,4);
+BEGIN
+    -- Calculate costs
+    v_compute_cost := p_execution_time_ms * v_compute_rate;
+    v_storage_cost := p_rows_processed * v_storage_rate;
+    v_network_cost := p_rows_processed * v_network_rate;
+    v_total_cost := v_compute_cost + v_storage_cost + v_network_cost;
+    
+    -- Store cost attribution
+    INSERT INTO query_performance.query_cost_attribution (
+        query_hash, user_name, application_name, compute_cost,
+        storage_cost, network_cost, total_cost, execution_time_ms, rows_processed,
+        cost_per_row, cost_per_second
+    ) VALUES (
+        p_query_hash, p_user_name, p_application_name, v_compute_cost,
+        v_storage_cost, v_network_cost, v_total_cost, p_execution_time_ms, p_rows_processed,
+        CASE WHEN p_rows_processed > 0 THEN v_total_cost / p_rows_processed ELSE 0 END,
+        CASE WHEN p_execution_time_ms > 0 THEN v_total_cost / (p_execution_time_ms / 1000) ELSE 0 END
+    );
+    
+    RETURN QUERY SELECT v_compute_cost, v_storage_cost, v_network_cost, v_total_cost;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Cost optimization recommendations
+CREATE OR REPLACE VIEW query_performance.cost_optimization_recommendations AS
+SELECT 
+    user_name,
+    application_name,
+    COUNT(*) as query_count,
+    SUM(total_cost) as total_cost,
+    AVG(total_cost) as avg_cost_per_query,
+    SUM(execution_time_ms) as total_execution_time_ms,
+    SUM(rows_processed) as total_rows_processed,
+    CASE 
+        WHEN AVG(cost_per_row) > (SELECT AVG(cost_per_row) * 2 FROM query_performance.query_cost_attribution) 
+        THEN 'HIGH_COST_PER_ROW'
+        WHEN AVG(execution_time_ms) > (SELECT AVG(execution_time_ms) * 2 FROM query_performance.query_cost_attribution)
+        THEN 'LONG_RUNNING_QUERIES'
+        ELSE 'OPTIMAL'
+    END as optimization_opportunity
+FROM query_performance.query_cost_attribution
+WHERE executed_at > NOW() - INTERVAL '30 days'
+GROUP BY user_name, application_name
+HAVING SUM(total_cost) > 10.00 -- Focus on significant costs
+ORDER BY total_cost DESC;
