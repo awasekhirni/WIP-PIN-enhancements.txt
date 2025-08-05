@@ -1,0 +1,1694 @@
+--todo views for OHIPP DB Schema 
+--Awase 
+
+----Views -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Todo work in progress --Awase
+-- ----===============================================
+-- -- 1.1. Patient Demographics View
+-- --
+-- -- View Name: ohip_core.vw_patient_demographics
+-- -- Business Case: Provide a consolidated, de-normalized view of patient demographic information for easy access by clinical and administrative staff, ensuring accurate patient identification and communication.
+-- -- Purpose: Simplify patient data retrieval by joining relevant tables to present core demographic details (name, DOB, address, contact info) in a single row per patient.
+-- -- KPIs:
+-- -- Query performance for patient lookups (< 50ms).
+-- -- Data completeness (percentage of patients with complete demographic data).
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- --  1.2. Provider Details View
+-- --
+-- -- View Name: ohip_core.vw_provider_details
+-- -- Business Case: Offer a unified overview of provider information, including clinic affiliations and specialties, for scheduling, billing, and communication purposes.
+-- -- Purpose: Combine data from providers, provider_clinics, and specialties tables to give a complete picture of a provider's profile.
+-- -- KPIs:
+-- -- Accuracy of provider-clinic affiliations.
+-- -- Up-to-date specialty information availability.
+-- --  1.3. Claim Details with Patient/Provider Info View
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- -- View Name: ohip_core.vw_claim_details_full
+-- -- Business Case: Enable billing and administrative staff to quickly access comprehensive claim information, including patient and provider details, for adjudication and dispute resolution.
+-- -- Purpose: Join claims, patients, and providers tables to present all relevant claim context in one place.
+-- -- KPIs:
+-- -- Speed of claim detail retrieval for review (< 100ms).
+-- -- Reduction in time spent gathering claim context information.
+-- --  1.4. Recent Patient Visits View
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- -- View Name: ohip_core.vw_recent_visits
+-- -- Business Case: Facilitate follow-up care and appointment scheduling by providing quick access to patients' recent visit history.
+-- -- Purpose: Filter and present the most recent visits for each patient, possibly including visit type and reason.
+-- -- KPIs:
+-- -- Timeliness of recent visit data.
+-- -- Percentage of patients with easily accessible recent visit records.
+-- --  1.5. Active Clinic Staff View
+-- --  ----===============================================
+-- --
+-- --
+-- --  ----===============================================
+-- --
+-- -- View Name: ohip_core.vw_active_clinic_staff
+-- -- Business Case: Support clinic management and HR by displaying current staffing levels and roles within each clinic.
+-- -- Purpose: Aggregate data from providers and provider_clinics to show active staff members per clinic.
+-- -- KPIs:
+-- -- Accuracy of active staff counts per clinic.
+-- -- Staffing data update frequency.
+-- --  1.6. Patient Account Summary View
+-- --  ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- View Name: ohip_core.vw_patient_account_summary
+-- -- Business Case: Provide financial staff with a quick overview of patient account balances and payment history for billing and collections.
+-- -- Purpose: Combine account balances, recent payments, and outstanding charges for each patient.
+-- -- KPIs:
+-- -- Account balance accuracy.
+-- -- Reduction in time to resolve patient account inquiries.
+-- --  1.7. Outstanding Claims View
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- -- View Name: ohip_core.vw_outstanding_claims
+-- -- Business Case: Assist billing departments in tracking claims that are pending payment or require follow-up action.
+-- -- Purpose: Filter claims to show only those not yet paid or finalized, possibly including aging information.
+-- -- KPIs:
+-- -- Reduction in outstanding claim aging.
+-- -- Accuracy of claim status tracking.
+-- --  1.8. Daily Clinic Schedule View
+-- --  ----===============================================
+-- --
+-- --
+-- --  ----===============================================
+-- -- View Name: ohip_core.vw_daily_clinic_schedule
+-- -- Business Case: Give clinic staff a real-time view of the day's appointments and provider availability.
+-- -- Purpose: Present scheduled visits, providers, timeslots, and possibly patient names (with appropriate privacy controls) for a given clinic and date.
+-- -- KPIs:
+-- -- Schedule accuracy and completeness.
+-- -- Reduction in scheduling conflicts.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 2.1. Monthly Billing Summary by Clinic
+-- --
+-- -- MV Name: analytics.mv_monthly_billing_summary
+-- -- Business Case: Generate high-level financial reports for clinic managers and executives to track revenue performance and identify trends.
+-- -- Purpose: Pre-aggregate claim and payment data by clinic and month to provide quick access to key billing metrics (total claims, paid/rejected counts, amounts).
+-- -- KPIs:
+-- -- Report generation speed improvement.
+-- -- Accuracy of aggregated financial data.
+-- -- Reduction in database load during peak reporting times.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- --  2.2. Top Diagnoses/Procedures by Volume
+-- --
+-- -- MV Name: analytics.mv_top_dx_proc_by_volume
+-- -- Business Case: Support clinical and operational planning by identifying the most commonly billed services and diagnoses.
+-- -- Purpose: Pre-aggregate diagnosis and procedure code usage to highlight high-volume services.
+-- -- KPIs:
+-- -- Timeliness of volume trend updates.
+-- -- Accuracy of service frequency data.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- --  2.3. Provider Productivity Dashboard MV
+-- --
+-- -- MV Name: analytics.mv_provider_productivity
+-- -- Business Case: Enable performance management by tracking key productivity indicators for individual providers.
+-- -- Purpose: Calculate metrics like visits per day, claims submitted, denial rates, and average payment amounts per provider.
+-- -- KPIs:
+-- -- Provider performance visibility.
+-- -- Correlation between productivity metrics and outcomes.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- --  2.4. Patient Visit Trends MV
+-- --
+-- -- MV Name: analytics.mv_patient_visit_trends
+-- -- Business Case: Identify seasonal patterns, patient flow, and service demand to optimize clinic operations and staffing.
+-- -- Purpose: Aggregate visit data over time to show trends in patient volume and service types.
+-- -- KPIs:
+-- -- Predictive accuracy of visit volume trends.
+-- -- Operational efficiency based on trend insights.
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --  2.5. Claim Denial Analysis MV
+-- --
+-- -- MV Name: analytics.mv_claim_denial_analysis
+-- -- Business Case: Focus improvement efforts by analyzing patterns in claim denials to reduce revenue leakage.
+-- -- Purpose: Group denied claims by reason, provider, clinic, and time period to identify root causes.
+-- -- KPIs:
+-- -- Reduction in overall denial rate (%).
+-- -- Speed of denial root cause identification.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  2.6. Audit Compliance Summary MV
+-- --
+-- -- MV Name: governance.mv_audit_compliance_summary
+-- -- Business Case: Provide oversight bodies with a consolidated view of audit findings and compliance status across clinics.
+-- -- Purpose: Aggregate audit results, findings, and action plan statuses to track organizational compliance health.
+-- -- KPIs:
+-- -- Audit finding resolution rate.
+-- -- Overall compliance score improvement.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- --  2.7. Data Quality Scorecard MV
+-- --
+-- -- MV Name: governance.mv_data_quality_scorecard
+-- -- Business Case: Monitor and report on the overall health and reliability of data assets to ensure trust in analytics and operational decisions.
+-- -- Purpose: Calculate and display data quality metrics (completeness, accuracy, consistency) for key tables and fields.
+-- -- KPIs:
+-- -- Overall data quality score improvement.
+-- -- Reduction in data quality issues identified.
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --  2.8. Revenue Cycle Performance MV
+-- --
+-- -- MV Name: analytics.mv_revenue_cycle_performance
+-- -- Business Case: Track the efficiency and effectiveness of the end-to-end revenue cycle process.
+-- -- Purpose: Calculate key metrics like Days in AR, Collection Rate, Clean Claim Rate, and Average Payment Time.
+-- -- KPIs:
+-- -- Improvement in Days in AR.
+-- -- Increase in Clean Claim Rate.
+-- -- Reduction in Average Payment Time.
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --  3. STORED PROCEDURES
+-- --
+-- -- 3.1. Submit Claim Procedure
+-- --
+-- -- SP Name: ohip_core.sp_submit_claim
+-- -- Business Case: Automate the complex process of validating and submitting a claim to the OHIP system, ensuring all prerequisites are met.
+-- -- Purpose: Perform data validation, calculate billing amounts, assign necessary codes, and insert the claim record with appropriate status.
+-- -- KPIs:
+-- -- Claim submission success rate.
+-- -- Reduction in manual errors during claim submission.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  3.2. Generate Patient Statement Procedure
+-- --
+-- -- SP Name: ohip_core.sp_generate_patient_statement
+-- -- Business Case: Create and send patient account statements automatically based on account activity and configured schedules.
+-- -- Purpose: Retrieve account details, calculate balances, format statement data, and trigger statement delivery (print/email).
+-- -- KPIs:
+-- -- On-time statement generation rate.
+-- -- Patient statement delivery success rate.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- -- 3.3. Process Payment Procedure
+-- -- SP Name: ohip_core.sp_process_payment
+-- -- Business Case: Accurately apply incoming payments to the correct patient accounts and claims, updating balances and statuses.
+-- -- Purpose: Match payments to outstanding balances, update account/claim records, and log payment details.
+-- -- KPIs:
+-- -- Payment application accuracy.
+-- -- Reduction in unapplied payment amounts.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  3.4. Run Data Quality Checks Procedure
+-- --
+-- -- SP Name: governance.sp_run_data_quality_checks
+-- -- Business Case: Execute a suite of predefined data quality rules against specified datasets to proactively identify and report issues.
+-- -- Purpose: Validate data against quality criteria, log results, and potentially trigger alerts or remediation workflows.
+-- -- KPIs:
+-- -- Coverage of data elements checked.
+-- -- Timeliness of data quality issue identification.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  3.5. Schedule Audit Procedure
+-- -- SP Name: governance.sp_schedule_audit
+-- -- Business Case: Automate the creation and assignment of audit tasks based on predefined schedules, templates, and clinic assignments.
+-- -- Purpose: Instantiate new audit records, populate them with relevant scope/checklists, and assign them to auditors.
+-- -- KPIs:
+-- -- Audit scheduling adherence.
+-- -- Coverage of clinics audited per schedule.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  3.6. Calculate Provider Compensation Procedure
+-- --
+-- -- SP Name: analytics.sp_calculate_provider_compensation
+-- -- Business Case: Compute provider compensation based on complex fee schedules, productivity metrics, and contractual agreements.
+-- -- Purpose: Aggregate service data, apply fee calculations, consider bonuses/penalties, and generate compensation reports.
+-- -- KPIs:
+-- -- Accuracy of compensation calculations.
+-- -- Reduction in compensation disputes.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  3.7. Update Patient Visit Status Procedure
+-- -- SP Name: ohip_core.sp_update_visit_status
+-- -- Business Case: Manage the lifecycle of a patient visit, transitioning its status through check-in, check-out, and billing stages.
+-- -- Purpose: Validate status transitions, update visit timestamps, and trigger related actions (e.g., claim creation).
+-- -- KPIs:
+-- -- Visit status update accuracy.
+-- -- Timeliness of visit lifecycle progression.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  3.8. Generate Compliance Report Procedure
+-- -- SP Name: governance.sp_generate_compliance_report
+-- -- Business Case: Compile and format compliance data from various sources into standardized reports for internal review or external submission.
+-- -- Purpose: Query relevant tables/views, aggregate data, apply formatting, and output report in desired format (PDF, CSV).
+-- -- KPIs:
+-- -- Report generation timeliness.
+-- -- Compliance report completeness and accuracy.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 4.1. Claim Payment Summary View
+-- --
+-- -- View Name: ohip_core.vw_claim_payment_summary
+-- -- Business Case: Provide billing staff with a quick overview of claim payment status, including total amounts, payment dates, and outstanding balances, to facilitate collections and financial reconciliation.
+-- -- Purpose: Join claims and payments tables to present payment information alongside claim details in a single, easy-to-query view.
+-- --  KPIs:
+-- -- Reduction in time to reconcile claim payments.
+-- -- Accuracy of outstanding balance calculations.
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- -- 4.2. Active Patient Communications View
+-- --
+-- -- View Name: governance.vw_active_patient_communications
+-- -- Business Case: Enable the communications team to monitor and manage pending or recently sent patient messages, ensuring timely delivery and response tracking.
+-- -- Purpose: Display communications with 'queued', 'sent', or 'delivered' status, allowing filtering by date, type, or patient.
+-- --  KPIs:
+-- -- Communication delivery success rate.
+-- -- Timeliness of communication status updates.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 4.3. Provider Specialty Mapping View
+-- --
+-- -- View Name: ohip_core.vw_provider_specialty_mapping
+-- -- Business Case: Offer a clear mapping between providers and their registered specialties for scheduling, referral management, and reporting purposes.
+-- --  Purpose: Link providers and provider_specialties (assuming this table exists based on context) to show the relationship between providers and their areas of expertise.
+-- --  KPIs:
+-- -- Data completeness of provider specialty information.
+-- -- Accuracy of specialty-based scheduling and referrals.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 4.4. Recent Audit Findings View
+-- --
+-- -- View Name: governance.vw_recent_audit_findings
+-- -- Business Case: Allow compliance officers to quickly access the latest audit findings, their status, and assigned personnel for prompt resolution tracking.
+-- -- Purpose: Present findings from audit_findings (or similar) filtered by recent dates, status, and severity.
+-- -- KPIs:
+-- -- Timeliness of audit finding identification and assignment.
+-- -- Reduction in time to resolve critical findings.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 4.5. Denied Claims with Root Cause View
+-- --
+-- -- View Name: analytics.vw_denied_claims_with_causes
+-- -- Business Case: Facilitate denial management by presenting denied claims alongside their identified root causes and suggested resolutions from the denial_root_causes table.
+-- -- Purpose: Join claims (where status = 'rejected') with denial_root_causes to provide a comprehensive view for denial analysis.
+-- -- KPIs:
+-- -- Percentage of denied claims with identified root causes.
+-- -- Effectiveness of suggested resolutions.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- -- 5.1. Quarterly Clinical Productivity Benchmark MV
+-- --
+-- -- MV Name: analytics.mv_quarterly_clinical_productivity_benchmark
+-- -- Business Case: Generate standardized benchmarks for provider productivity (e.g., visits per day, claims per provider) to enable internal comparison and performance management.
+-- -- Purpose: Pre-aggregate data from patient_visits and claims by provider and quarter to calculate key productivity metrics.
+-- -- KPIs:
+-- -- Benchmark data freshness.
+-- -- Adoption of benchmarks in performance reviews.
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 5.2. Patient Communication Effectiveness MV
+-- --
+-- -- MV Name: analytics.mv_patient_communication_effectiveness
+-- -- Purpose: Pre-calculate communication KPIs like open rates, read rates, and response times by aggregating data from patient_communications.
+-- --  KPIs:
+-- -- Improvement in communication engagement metrics.
+-- -- Channel-specific performance analysis.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 5.3. Fraud Detection Model Performance MV
+-- --
+-- -- MV Name: analytics.mv_fraud_detection_model_performance
+-- -- Business Case: Evaluate the ongoing effectiveness of fraud detection models by comparing predicted frauds (fraud_detections) against confirmed outcomes.
+-- -- Purpose: Aggregate model accuracy metrics (precision, recall, F1-score) and detection rates from fraud_detections and denial_prediction_models.
+-- -- KPIs:
+-- -- Model precision and recall improvement over time.
+-- -- Reduction in false positive rate.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- -- 5.4. Revenue Cycle Efficiency Trends MV
+-- --
+-- -- MV Name: analytics.mv_revenue_cycle_efficiency_trends
+-- -- Business Case: Track key revenue cycle metrics over time (Days in AR, Collection Rate, Denial Rate) to identify trends and measure the impact of process improvements.
+-- -- Purpose: Aggregate data from claims and payments grouped by time periods to calculate efficiency indicators.
+-- -- KPIs:
+-- -- Reduction in average Days in AR.
+-- -- Improvement in overall Collection Rate.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 5.5. Compliance Alert Summary MV
+-- --
+-- -- MV Name: governance.mv_compliance_alert_summary
+-- -- Business Case: Provide a consolidated dashboard view of compliance alerts, their severity, status, and resolution rates for governance reporting.
+-- -- Purpose: Aggregate data from compliance_alerts (or similar) to summarize alert volumes, severities, and resolution trends.
+-- -- KPIs:
+-- -- Reduction in open compliance alerts.
+-- -- Improvement in alert resolution time.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- -- 6.1. Generate Monthly Compliance Report SP
+-- --
+-- -- SP Name: governance.sp_generate_monthly_compliance_report
+-- -- Business Case: Automate the creation of comprehensive monthly compliance reports, compiling data from audit findings, policy adherence, and security events.
+-- -- Purpose: Query relevant tables (audit_findings, policy_compliance_tracking, security_events, etc.), aggregate the data, and produce a formatted report (potentially triggering email delivery or file generation).
+-- -- KPIs:
+-- -- Report generation timeliness.
+-- -- Completeness of compliance data included.
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --  6.2. Apply Fee Optimization Recommendations SP
+-- --
+-- -- SP Name: analytics.sp_apply_fee_optimization_recommendations
+-- -- Business Case: Automatically or semi-automatically apply suggested fee optimizations from fee_optimization_opportunities to relevant claims or visits.
+-- -- Purpose: Update claim codes or visit details based on accepted recommendations, logging the changes and recalculating potential gains.
+-- -- KPIs:
+-- -- Percentage of accepted recommendations successfully applied.
+-- -- Actual revenue gain realized vs. estimated.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- --  6.3. Refresh Patient Cohort Membership SP
+-- --
+-- -- SP Name: analytics.sp_refresh_patient_cohort_membership
+-- -- Business Case: Dynamically update the list of patients belonging to specific cohorts based on their current data, ensuring cohorts reflect the latest patient population.
+-- -- Purpose: Execute the logic defined in cohort_criteria (likely involving queries against patients, patient_visits, claims, etc.) to identify qualifying patients and update the cohort membership list (assuming a separate membership table or a dynamic view).
+-- -- KPIs:
+-- -- Accuracy of cohort membership lists.
+-- -- Timeliness of cohort refresh cycles.
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --  6.4. Process Regulation Updates SP
+-- --
+-- -- SP Name: governance.sp_process_regulation_updates
+-- -- Business Case: Systematically ingest and process updates to regulations, creating new entries in regulation_tracking and initiating impact analyses.
+-- -- Purpose: Parse new regulation data (from a staging table or API), create or update records in regulation_tracking, and potentially trigger the creation of new entries in regulation_impact_analysis or alert relevant stakeholders.
+-- -- KPIs:
+-- -- Timeliness of regulation update processing.
+-- -- Coverage of new regulations in tracking system.
+-- -- ----===============================================
+-- --
+-- -- ----===============================================
+-- --  6.5. Calculate and Store Data Quality Scores SP
+-- --
+-- -- SP Name: governance.sp_calculate_data_quality_scores
+-- -- Business Case: Perform regular scans of key data tables to calculate and store data quality scores in data_quality_scores, identifying areas needing improvement.
+-- -- Purpose: Execute predefined data quality rules (completeness, accuracy, consistency checks) against target tables, compute scores, and insert/update records in the data_quality_scores table.
+-- -- KPIs:
+-- -- Frequency and coverage of data quality assessments.
+-- -- Improvement in overall data quality scores over time.
+-- -- ----===============================================
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- -- 7.1. Patient Communication History View
+-- --
+-- -- View Name:governance.vw_patient_communication_history
+-- -- Business Case: Provide a chronological view of all communications sent to a specific patient, including type, status, and content, to support patient relations and ensure complete communication tracking.
+-- -- Purpose: Consolidate data from patient_communications to show a patient's complete communication timeline.
+-- -- KPIs:
+-- --     -   Communication history completeness.
+-- --     -   Patient engagement tracking via read/delivery status.
+-- --
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --
+-- -- 7.2. Active Fraud Detections View
+-- --
+-- -- View Name:governance.vw_active_fraud_detections
+-- -- Business Case: Enable the fraud team to quickly identify and prioritize unresolved fraud detections requiring investigation.
+-- -- Purpose: Filter fraud_detections to show only those with status 'new' or 'investigating'.
+-- -- KPIs:
+-- --     -   Reduction in time to investigate fraud detections.
+-- --     -   Fraud detection resolution rate.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 7.3. Provider Coding Accuracy Detail View
+-- --
+-- -- View Name:governance.vw_provider_coding_accuracy_detail
+-- -- Business Case: Offer detailed insights into individual provider coding performance by comparing AI suggestions against physician acceptance, supporting targeted training and quality improvement.
+-- -- Purpose: Join coding_accuracy with documentation_analysis and providers to show accuracy metrics per provider.
+-- -- KPIs:
+-- --     -   Provider-specific coding accuracy improvement.
+-- --     -   Training effectiveness for providers with low accuracy scores.
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- -- 7.4. Claim Payment Timeline View
+-- --
+-- -- View Name:analytics.vw_claim_payment_timeline
+-- -- Business Case: Visualize the complete lifecycle of a claim from service date through payment, highlighting processing delays and bottlenecks.
+-- -- Purpose: Join claims, payments, and potentially claim_audit_log to create a chronological timeline of claim events.
+-- -- KPIs:
+-- --     -   Average claim processing time.
+-- --     -   Identification of delays in the payment cycle.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 7.5. Clinic Revenue Summary View
+-- --
+-- -- View Name:analytics.vw_clinic_revenue_summary
+-- -- Business Case: Provide clinic managers with a quick snapshot of their financial performance, including collected amounts, pending claims, and denial rates.
+-- -- Purpose: Aggregate data from claims and payments grouped by clinic_id.
+-- -- KPIs:
+-- --     -   Clinic revenue visibility.
+-- --     -   Denial rate monitoring per clinic.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 7.6. Upcoming Policy Reviews View
+-- --
+-- -- View Name:governance.vw_upcoming_policy_reviews
+-- -- Business Case: Alert governance teams to policies that are due for periodic review, ensuring compliance with review schedules.
+-- -- Purpose: Select from policy_reviews where next_review_date is approaching and status is not 'completed'.
+-- -- KPIs:
+-- --     -   Policy review adherence.
+-- --     -   Proactive governance compliance.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 7.7. Pending Audit Actions View
+-- --
+-- -- View Name:governance.vw_pending_audit_actions
+-- -- Business Case: Help auditors and clinic staff track outstanding action items from completed audits that require attention.
+-- -- Purpose: Filter audit_action_plans to show items with status 'pending' or 'in_progress'.
+-- -- KPIs:
+-- --     -   Audit action item completion rate.
+-- --     -   Reduction in overdue action items.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 7.8. Recent Security Events View
+-- --
+-- -- View Name:governance.vw_recent_security_events
+-- -- Business Case: Provide security teams with a real-time view of recent security events for monitoring and incident response.
+-- -- Purpose: Select the most recent entries from security_events, potentially filtering by severity.
+-- -- KPIs:
+-- --     -   Security event detection rate.
+-- --     -   Response time to critical security events.
+-- --
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- -- 8.1. Annual Provider Performance MV
+-- --
+-- -- MV Name:analytics.mv_annual_provider_performance
+-- -- Business Case: Generate comprehensive annual performance reports for individual providers, aggregating data on claims processed, denial rates, coding accuracy, and patient volume.
+-- -- Purpose: Pre-aggregate provider performance data from claims, fraud_detections, coding_accuracy, and patient_visits on an annual basis.
+-- -- KPIs:
+-- --     -   Provider performance report generation speed.
+-- --     -   Accuracy of aggregated performance metrics.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.2. Patient Satisfaction Trends MV
+-- --
+-- -- MV Name:analytics.mv_patient_satisfaction_trends
+-- -- Purpose: Pre-calculate satisfaction scores and trends over time from patient_satisfaction_surveys to identify clinic or service line performance issues.
+-- -- KPIs:
+-- --     -   Trend analysis accuracy.
+-- --     -   Early identification of declining satisfaction scores.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.3. System Uptime and Reliability MV
+-- --
+-- -- MV Name:analytics.mv_system_uptime_reliability
+-- -- Business Case: Monitor and report on the overall uptime and reliability of critical system components by analyzing logs from data_access_logs or a dedicated system monitoring table.
+-- -- Purpose: Aggregate system access logs or monitoring data to calculate uptime percentages and identify outages.
+-- -- KPIs:
+-- --     -   System availability percentage.
+-- --     -   Mean time to recovery (MTTR) from outages.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.4. Data Lineage Impact Analysis MV
+-- --
+-- -- MV Name:governance.mv_data_lineage_impact_analysis
+-- -- Business Case: Quickly assess the potential impact of changes to a specific data element by analyzing its lineage from data_lineage.
+-- -- Purpose: Pre-aggregate upstream and downstream dependencies for key tables/columns.
+-- -- KPIs:
+-- --     -   Impact analysis speed for change management.
+-- --     -   Reduction in unintended consequences from data changes.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.5. AI Model Performance Comparison MV
+-- --
+-- -- MV Name:analytics.mv_ai_model_performance_comparison
+-- -- Business Case: Compare the effectiveness of different AI models (e.g., different denial prediction models) side-by-side to inform model selection and improvement.
+-- -- Purpose: Join data from model_performance, denial_prediction_models, and fraud_detections to create comparative performance dashboards.
+-- -- KPIs:
+-- --     -   Model selection based on performance data.
+-- --     -   Identification of underperforming models for retirement.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.6. Regulatory Compliance Scorecard MV
+-- --
+-- -- MV Name:governance.mv_regulatory_compliance_scorecard
+-- -- Business Case: Provide executives and compliance officers with a high-level view of the organization's compliance posture across various regulations.
+-- -- Purpose: Aggregate data from regulation_tracking, policy_compliance_tracking, audit_findings, and compliance_alerts.
+-- -- KPIs:
+-- --     -   Overall compliance score improvement.
+-- --     -   Identification of high-risk compliance areas.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.7. Workflow Efficiency Analysis MV
+-- --
+-- -- MV Name:analytics.mv_workflow_efficiency_analysis
+-- -- Business Case: Analyze the efficiency of business workflows by examining execution times and success rates from workflow_executions or derived data.
+-- -- Purpose: Calculate average execution times, success rates, and bottlenecks for different workflow types.
+-- -- KPIs:
+-- --     -   Workflow execution time reduction.
+-- --     -   Workflow success rate improvement.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 8.8. Patient Cohort Outcomes MV
+-- --
+-- -- MV Name:analytics.mv_patient_cohort_outcomes
+-- -- Business Case: Track and analyze health outcomes and treatment effectiveness for specific patient cohorts defined in patient_cohorts.
+-- -- Purpose: Join cohort definitions with patient outcomes data (from claims, patient_visits, etc.) to measure cohort performance.
+-- -- KPIs:
+-- --     -   Cohort outcome tracking completeness.
+-- --     -   Clinical effectiveness measurement for cohort-based treatments.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- --
+-- -- 9.1. Generate Monthly Financial Report SP
+-- --
+-- -- SP Name:analytics.sp_generate_monthly_financial_report
+-- -- Business Case: Automate the creation of detailed monthly financial reports for clinics, summarizing claims, payments, denials, and key financial KPIs.
+-- -- Purpose: Query claims, payments, and clinic_benchmarks, aggregate the data, and potentially generate a report file or populate a reporting table.
+-- -- KPIs:
+-- --     -   Report generation timeliness.
+-- --     -   Accuracy of financial summaries.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.2. Re-run Failed Workflows SP
+-- --
+-- -- SP Name:governance.sp_rerun_failed_workflows
+-- -- Business Case: Automatically retry or manually trigger the re-execution of workflows that failed during their initial run.
+-- -- Purpose: Identify failed entries in workflow_executions, reset their status, and initiate re-processing.
+-- -- KPIs:
+-- --     -   Workflow failure recovery rate.
+-- --     -   Reduction in manual intervention for failed workflows.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.3. Archive Old Audit Data SP
+-- --
+-- -- SP Name:governance.sp_archive_old_audit_data
+-- -- Business Case: Move older audit records (findings, actions, logs) to an archive table or system to maintain main table performance while retaining historical data.
+-- -- Purpose: Select records from audit_findings, audit_action_plans, etc., older than a threshold, copy them to archive tables, and remove them from the main tables.
+-- -- KPIs:
+-- --     -   Main table size reduction.
+-- --     -   Archive completeness and integrity.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.4. Bulk Update Patient Communication Status SP
+-- --
+-- -- SP Name:governance.sp_bulk_update_patient_communication_status
+-- -- Business Case: Efficiently update the status of multiple patient communications (e.g., mark as delivered after batch processing) without individual updates.
+-- -- Purpose: Accept a list of communication IDs and a new status, then perform a bulk update operation.
+-- -- KPIs:
+-- --     -   Communication status update throughput.
+-- --     -   Reduction in processing time for batch status changes.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.5. Calculate and Store Industry Benchmarks SP
+-- --
+-- -- SP Name:analytics.sp_calculate_store_industry_benchmarks
+-- -- Business Case: Periodically calculate internal performance benchmarks (e.g., average denial rate, collection time) and store them in industry_benchmarks for comparative analysis.
+-- -- Purpose: Query current performance data from claims, payments, etc., calculate aggregate metrics, and insert them into the industry_benchmarks table.
+-- -- KPIs:
+-- --     -   Benchmark calculation accuracy.
+-- --     -   Timeliness of benchmark updates.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.6. Validate and Update Data Quality Scores SP
+-- --
+-- -- SP Name:governance.sp_validate_update_data_quality_scores
+-- -- Business Case: Execute data quality rules from data_quality_rules against target tables and update data_quality_scores with the latest results.
+-- -- Purpose: Iterate through active quality rules, execute the rule_sql, calculate scores, and insert/update records in data_quality_scores.
+-- -- KPIs:
+-- --     -   Data quality score update frequency.
+-- --     -   Coverage of tables/columns with quality scores.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.7. Process and Store Patient Feedback SP
+-- --
+-- -- SP Name:governance.sp_process_store_patient_feedback
+-- -- Business Case: Ingest patient feedback from external sources (surveys, forms), validate it, and store it in patient_feedback with appropriate categorization.
+-- -- Purpose: Parse incoming feedback data, map it to the correct patients/clinics, apply business rules, and insert into the feedback table.
+-- -- KPIs:
+-- --     -   Feedback ingestion success rate.
+-- --     -   Data completeness of stored feedback.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- -- 9.8. Generate Compliance Training Recommendations SP
+-- --
+-- -- SP Name:governance.sp_generate_compliance_training_recommendations
+-- -- Business Case: Analyze audit findings, policy violations, and user activity from audit_findings, policy_compliance_tracking, and user_activity_analysis to automatically generate personalized training recommendations stored in education_recommendations.
+-- -- Purpose: Identify knowledge gaps or recurring issues for specific users/roles and create targeted education recommendations.
+-- -- KPIs:
+-- --     -   Training recommendation relevance.
+-- --     -   Reduction in repeat audit findings after recommendations.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- --
+-- --     10.1. Payment Reconciliation View
+-- --
+-- --     View Name: ohip_core.vw_payment_reconciliation
+-- --     Business Case: Enable finance teams to quickly identify and resolve discrepancies between claimed amounts and actual payments received, ensuring accurate financial records and minimizing revenue leakage.
+-- --     Purpose: Join claims and payments tables to show claimed amounts, payment amounts, differences, and reconciliation status for each claim-payment pair.
+-- --     KPIs:
+-- --     Payment reconciliation accuracy.
+-- --     Reduction in unreconciled payment discrepancies.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.2. Active Education Recommendations View
+-- --
+-- --     View Name: governance.vw_active_education_recommendations
+-- --     Business Case: Help training coordinators and providers focus on pending educational recommendations that require attention or action.
+-- --     Purpose: Filter education_recommendations to show only those with completed = FALSE and relevant status, ordered by priority.
+-- --     KPIs:
+-- --     Recommendation completion rate.
+-- --     Timeliness of educational recommendation fulfillment.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.3. Claim Status Timeline View
+-- --
+-- --     View Name: ohip_core.vw_claim_status_timeline
+-- --     Business Case: Provide billing staff with a chronological view of all status changes for a specific claim, aiding in troubleshooting and customer service.
+-- --     Purpose: Join claims with claim_audit_log to display a timeline of status transitions and modification details for each claim.
+-- --     KPIs:
+-- --     Claim status tracking completeness.
+-- --     Reduction in time to resolve claim status inquiries.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.4. High-Risk Claims View
+-- --
+-- --     View Name: analytics.vw_high_risk_claims
+-- --     Business Case: Allow billing teams to prioritize review of claims with a high predicted risk of denial, improving first-pass success rates.
+-- --     Purpose: Select from claim_denial_predictions where denial_risk is above a certain threshold (e.g., 80%), joined with claims for full context.
+-- --     KPIs:
+-- --     High-risk claim identification accuracy.
+-- --     Reduction in denial rate for reviewed high-risk claims.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.5. Patient Communication Preferences Summary View
+-- --
+-- --     View Name: ohip_core.vw_patient_communication_preferences_summary
+-- --     Business Case: Enable staff to quickly see a patient's preferred communication methods and opt-out status for different communication types.
+-- --     Purpose: Aggregate data from patient_communication_preferences to show a consolidated view of preferences per patient.
+-- --     KPIs:
+-- --     Communication preference data completeness.
+-- --     Patient satisfaction with communication method adherence.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.6. Recent Policy Changes View
+-- --
+-- --     View Name: governance.vw_recent_policy_changes
+-- --     Business Case: Keep stakeholders informed about recent updates to governance policies that may affect their work.
+-- --     Purpose: Select from policy_changes ordered by created_at to show the most recent policy modifications.
+-- --     KPIs:
+-- --     Policy change awareness among stakeholders.
+-- --     Timeliness of policy change communication.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.7. Active Audit Findings View
+-- --
+-- --     View Name: governance.vw_active_audit_findings
+-- --     Business Case: Help compliance officers track outstanding audit findings that require resolution or further action.
+-- --     Purpose: Filter audit_findings to show findings with status 'open' or 'in_progress'.
+-- --     KPIs:
+-- --     Audit finding resolution rate.
+-- --     Reduction in overdue audit findings.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      10.8. Provider Coding Accuracy Snapshot View
+-- --
+-- --     View Name: governance.vw_provider_coding_accuracy_snapshot
+-- --     Business Case: Provide a quick snapshot of a provider's recent coding accuracy performance based on AI validation results.
+-- --     Purpose: Aggregate data from coding_accuracy grouped by provider_id to show recent accuracy rates and trends.
+-- --     KPIs:
+-- --     Provider coding accuracy visibility.
+-- --     Identification of providers needing coding training.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- --     11.1. Monthly Revenue Cycle Dashboard MV
+-- --
+-- --     MV Name: analytics.mv_monthly_revenue_cycle_dashboard
+-- --     Business Case: Generate a pre-aggregated dashboard showing key monthly revenue cycle metrics (claims submitted, paid, denied, collection rates, average processing times) for executive reporting and operational monitoring.
+-- --     Purpose: Aggregate data from claims and payments grouped by month to calculate summary statistics for revenue cycle performance.
+-- --      KPIs:
+-- --     Dashboard data freshness.
+-- --     Executive reporting timeliness.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.2. Provider Performance Benchmarking MV
+-- --
+-- --     MV Name: analytics.mv_provider_performance_benchmarking
+-- --      Business Case: Create pre-calculated benchmarks for provider performance metrics (visit volume, claim submission rates, denial rates) to enable peer comparison and performance management.
+-- --     Purpose: Join providers, patient_visits, and claims to calculate performance metrics per provider, aggregated periodically.
+-- --     KPIs:
+-- --     Benchmarking data accuracy.
+-- --     Provider performance management effectiveness.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.3. Compliance Alert Triage MV
+-- --
+-- --     MV Name: governance.mv_compliance_alert_triage
+-- --     Business Case: Pre-aggregate compliance alerts by severity, type, and responsible party to facilitate efficient triage and prioritization by compliance teams.
+-- --      Purpose: Aggregate data from compliance_alerts grouped by severity, alert type, and assigned personnel for quick triage dashboards.
+-- --     KPIs:
+-- --     Alert triage efficiency.
+-- --     Reduction in time to assign critical alerts.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.4. Audit Effectiveness Summary MV
+-- --
+-- --     MV Name: governance.mv_audit_effectiveness_summary
+-- --      Business Case: Measure and report on the overall effectiveness of audit programs by tracking finding resolution rates, recurrence rates, and audit completion metrics.
+-- --     Purpose: Join audit_instances, audit_findings, and audit_action_plans to calculate audit program effectiveness metrics.
+-- --     KPIs:
+-- --     Audit program effectiveness improvement.
+-- --     Reduction in recurring audit findings.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.5. Data Quality Trend Analysis MV
+-- --
+-- --     MV Name: governance.mv_data_quality_trend_analysis
+-- --     Business Case: Track trends in data quality scores over time for different tables and columns to identify persistent issues and measure improvement efforts.
+-- --     Purpose: Aggregate data from data_quality_scores grouped by table/column and time periods to show quality trends.
+-- --      KPIs:
+-- --     Data quality trend visibility.
+-- --     Improvement in overall data quality scores.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.6. Patient Satisfaction Insights MV
+-- --
+-- --     MV Name: analytics.mv_patient_satisfaction_insights
+-- --     Business Case: Pre-analyze patient satisfaction survey data to identify common themes, trends, and areas for service improvement.
+-- --      Purpose: Aggregate data from patient_satisfaction_surveys and patient_satisfaction_analysis to extract insights and trends.
+-- --      KPIs:
+-- --     Patient satisfaction trend identification.
+-- --     Service improvement initiative effectiveness.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.7. Fee Schedule Compliance MV
+-- --
+-- --     MV Name: analytics.mv_fee_schedule_compliance
+-- --     Business Case: Monitor adherence to OHIP fee schedules by comparing billed amounts against current fee schedule values, identifying potential overbilling or underbilling issues.
+-- --     Purpose: Join claims with fee_schedule to calculate compliance metrics and identify discrepancies.
+-- --     KPIs:
+-- --     Fee schedule compliance rate.
+-- --     Reduction in billing discrepancies.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      11.8. AI Model Performance Comparison MV
+-- --
+-- --     MV Name: analytics.mv_ai_model_performance_comparison_dashboard
+-- --     Business Case: Compare the performance of different AI models (denial prediction, fraud detection) side-by-side to inform model selection and improvement efforts.
+-- --     Purpose: Aggregate performance data from model_performance and related model tables to create comparative dashboards.
+-- --     KPIs:
+-- --     Model performance comparison accuracy.
+-- --     Model selection based on performance data.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- --     12.1. Generate Monthly Billing Statement SP
+-- --
+-- --     SP Name: ohip_core.sp_generate_monthly_billing_statement
+-- --     Business Case: Automate the creation and distribution of monthly billing statements to patients, summarizing account activity and outstanding balances.
+-- --      Purpose: Query patient_accounts, claims, and payments for a given period, calculate balances, generate statement content, and trigger distribution.
+-- --     KPIs:
+-- --     Statement generation timeliness.
+-- --     Patient statement delivery success rate.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.2. Calculate Provider Productivity Score SP
+-- --
+-- --     SP Name: analytics.sp_calculate_provider_productivity_score
+-- --      Business Case: Compute a standardized productivity score for individual providers based on visit volume, claim submission rates, and other relevant metrics.
+-- --      Purpose: Query providers, patient_visits, and claims, apply scoring logic, and update or insert records in a provider productivity table/view.
+-- --     KPIs:
+-- --     Productivity score calculation accuracy.
+-- --     Provider performance management effectiveness.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.3. Process Compliance Alert Resolution SP
+-- --
+-- --     SP Name: governance.sp_process_compliance_alert_resolution
+-- --     Business Case: Systematically process the resolution of compliance alerts, updating their status, recording resolution details, and notifying relevant stakeholders.
+-- --     Purpose: Accept alert ID, resolution details, and resolver ID, update the compliance_alerts record, and potentially trigger notifications or workflow updates.
+-- --     KPIs:
+-- --     Alert resolution processing time.
+-- --     Resolution data completeness.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.4. Update Data Quality Scores SP
+-- --
+-- --     SP Name: governance.sp_update_data_quality_scores
+-- --     Business Case: Execute predefined data quality rules against target tables and update the data_quality_scores table with the latest results.
+-- --     Purpose: Run SQL queries or scripts defined in data_quality_rules, calculate scores, and insert/update records in data_quality_scores.
+-- --     KPIs:
+-- --     Data quality score update frequency.
+-- --     Accuracy of calculated quality scores.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.5. Archive Completed Audit Records SP
+-- --
+-- --     SP Name: governance.sp_archive_completed_audit_records
+-- --      Business Case: Move older, completed audit records and findings to an archive table to maintain main table performance while preserving historical data.
+-- --      Purpose: Select completed audits older than a threshold from audit_instances and audit_findings, copy them to archive tables, and remove them from main tables.
+-- --      KPIs:
+-- --     Archive process completion rate.
+-- --     Main table performance improvement.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.6. Send Patient Communication SP
+-- --
+-- --     SP Name: ohip_core.sp_send_patient_communication
+-- --      Business Case: Orchestrate the sending of patient communications through the preferred method, respecting opt-out preferences and logging the attempt.
+-- --      Purpose: Query patient_communication_preferences, select appropriate communication method, send message via the relevant channel, and log the attempt in patient_communications.
+-- --     KPIs:
+-- --     Communication send success rate.
+-- --     Patient preference adherence rate.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.7. Recalculate Claim Risk Score SP
+-- --
+-- --     SP Name: analytics.sp_recalculate_claim_risk_score
+-- --     Business Case: Re-evaluate the denial risk score for a claim based on updated information or a new model version.
+-- --     Purpose: Accept claim ID and optionally model ID, execute the denial prediction logic, and update or insert a record in claim_denial_predictions.
+-- --     KPIs:
+-- --     Risk score recalculation accuracy.
+-- --     Claim risk assessment timeliness.
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --      12.8. Apply Policy Exception SP
+-- --
+-- --     SP Name: governance.sp_apply_policy_exception
+-- --     Business Case: Process and apply an approved policy exception to a specific clinic or situation, updating relevant systems and logging the application.
+-- --     Purpose: Accept exception ID, validate approval status, apply the exception logic to the target system/context, and log the application in an audit trail.
+-- --     KPIs:
+-- --     Exception application success rate.
+-- --     Exception compliance adherence.
+-- --
+-- --     ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- --     ----===============================================
+-- --
+-- -- 13.1. Active Claims Overview View
+-- --
+-- -- View Name: ohip_core.vw_active_claims_overview
+-- -- Business Case: Provide billing and administrative staff with a real-time, high-level overview of all active claims (not yet paid or rejected) including key details like patient, provider, service date, amount, and current status, enabling quick prioritization and management of the claims pipeline.
+-- --  Purpose: Aggregate essential information from claims (and potentially joined with patients, providers, clinics) for claims where status is not 'paid' or 'rejected'.
+-- -- KPIs:
+-- -- Claim pipeline visibility.
+-- -- Reduction in time to identify and prioritize active claims.
+-- -- Data completeness (active claims with complete patient/provider info).
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.2. Patient Visit Details View
+-- --
+-- -- View Name: ohip_core.vw_patient_visit_details
+-- --  Business Case: Offer a comprehensive view of patient visit information, combining core visit data with related patient demographics and provider details for clinical and administrative use.
+-- --  Purpose: Join patient_visits with patients and providers to present a unified record of visit context.
+-- --  KPIs:
+-- -- Visit detail completeness.
+-- -- Lookup performance for visit information.
+-- -- Reduction in time to gather visit context.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.3. Provider Specialty and Clinic Affiliation View
+-- --
+-- -- View Name: ohip_core.vw_provider_specialty_clinic_affiliation
+-- -- Business Case: Enable easy identification of providers' specialties and their current clinic affiliations for scheduling, referral management, and reporting.
+-- -- Purpose: Join providers, provider_specialties (implied), and provider_clinics to show provider capabilities and locations.
+-- -- KPIs:
+-- -- Affiliation data accuracy.
+-- -- Scheduling efficiency.
+-- -- Referral appropriateness.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.4. Claim Payment Breakdown View
+-- --
+-- -- View Name: ohip_core.vw_claim_payment_breakdown
+-- --  Business Case: Facilitate detailed financial analysis and reconciliation by showing the breakdown of how a payment amount relates to specific claims or claim items.
+-- -- Purpose: Join payments with payment_items and claims to detail which claims/items were paid by each payment record.
+-- -- KPIs:
+-- -- Payment reconciliation accuracy.
+-- -- Financial reporting detail level.
+-- -- Reduction in time for payment analysis.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.5. Recent Patient Communications View
+-- --
+-- -- View Name: ohip_core.vw_recent_patient_communications
+-- --  Business Case: Allow clinic staff to quickly see recent communication attempts (successful or failed) with patients, supporting follow-up actions and patient engagement efforts.
+-- --  Purpose: Select recent records from patient_communications, potentially joined with patients for context.
+-- --  KPIs:
+-- -- Communication status visibility.
+-- -- Patient engagement tracking.
+-- -- Timeliness of follow-up actions.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.6. Clinic Provider Roster View
+-- --
+-- -- View Name: ohip_core.vw_clinic_provider_roster
+-- -- Business Case: Provide clinic administrators with a current list of all affiliated providers, their contact information, and status, for operational management and communication.
+-- -- Purpose: Join clinics with providers through provider_clinics (or similar) to list active providers per clinic.
+-- -- KPIs:
+-- -- Roster data completeness.
+-- -- Operational communication efficiency.
+-- -- Staffing visibility.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.7. Claim Audit Trail View
+-- --
+-- -- View Name: governance.vw_claim_audit_trail
+-- -- Business Case: Offer a chronological view of all modifications and key events related to a specific claim, supporting troubleshooting, compliance audits, and dispute resolution.
+-- -- Purpose: Select from claim_audit_log for a given claim_id, ordered by timestamp, to show the complete history of actions.
+-- --  KPIs:
+-- -- Audit trail completeness.
+-- -- Troubleshooting efficiency.
+-- -- Compliance readiness.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.8. Active Patient Accounts View
+-- --
+-- -- View Name: ohip_core.vw_active_patient_accounts
+-- -- Business Case: Enable financial staff to quickly access a list of patient accounts with outstanding balances, supporting collections and account management activities.
+-- -- Purpose: Filter patient_accounts where balance > 0 and is_active = TRUE.
+-- -- KPIs:
+-- -- Collections efficiency.
+-- -- Account management accuracy.
+-- -- Reduction in outstanding account aging.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.9. Upcoming Patient Appointments View
+-- --
+-- -- View Name: ohip_core.vw_upcoming_patient_appointments
+-- --  Business Case: Provide clinic schedulers and providers with a clear view of upcoming patient visits, supporting preparation and resource allocation.
+-- -- Purpose: Select from patient_visits where status = 'scheduled' and visit_date >= CURRENT_DATE, ordered by date/time.
+-- -- KPIs:
+-- -- Appointment preparation effectiveness.
+-- -- Resource allocation accuracy.
+-- -- Reduction in no-show rates.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.10. Claim Submission Queue View
+-- --
+-- -- View Name: ohip_core.vw_claim_submission_queue
+-- -- Business Case: Allow billing teams to monitor claims ready for submission to OHIP, track submission status, and identify any issues preventing submission.
+-- -- Purpose: Select from claims where status = 'ready_for_submission' or similar, ordered by priority or service date.
+-- -- KPIs:
+-- -- Submission queue visibility.
+-- -- Claim submission timeliness.
+-- -- Reduction in submission errors.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.11. Provider Workload Summary View
+-- --
+-- -- View Name: analytics.vw_provider_workload_summary
+-- -- Business Case: Enable clinic managers and providers to understand current and historical workload levels, supporting staffing decisions and work-life balance initiatives.
+-- -- Purpose: Aggregate data from patient_visits and/or claims grouped by provider_id to calculate visit counts, claim volumes, or other workload metrics.
+-- -- KPIs:
+-- -- Workload distribution fairness.
+-- -- Staffing decision support.
+-- -- Provider burnout risk mitigation.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+-- --  13.12. Clinic Performance Snapshot View
+-- --
+-- -- View Name: analytics.vw_clinic_performance_snapshot
+-- -- Business Case: Deliver executives and clinic managers a quick, consolidated view of key clinic performance indicators (volume, revenue, denial rates) for strategic oversight.
+-- --  Purpose: Join and aggregate data from clinics, claims, payments, and potentially revenue_cycle_metrics to present a dashboard-like summary.
+-- -- KPIs:
+-- -- Executive reporting timeliness.
+-- -- Strategic decision support quality.
+-- -- Performance trend visibility.
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--
+--
+-- 14.1. Claim Payment Reconciliation View
+--
+-- View Name: ohip_core.vw_claim_payment_reconciliation
+-- Business Case: Enable finance teams to quickly identify and resolve discrepancies between claimed amounts and actual payments received, ensuring accurate financial records and minimizing revenue leakage through systematic reconciliation processes. This system joins claims and payments tables to show claimed amounts, payment amounts, differences, and reconciliation status for each claim-payment pair, supporting proactive financial management and compliance with accounting standards.
+-- Purpose: Provide a unified view of claim-to-payment relationships by joining claims with payments to display reconciliation data including claim identifiers, service dates, claimed amounts, payment amounts, payment dates, differences between claimed and paid amounts, and reconciliation status indicators. It supports financial operations by enabling systematic discrepancy identification, facilitates audit readiness through organized reconciliation information, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader financial management workflows to support complete reconciliation lifecycle management from identification through resolution and reporting.
+-- KPIs:
+-- Reconciliation completeness (percentage of claims with complete payment reconciliation)
+-- Discrepancy identification rate (claims with payment differences identified promptly)
+-- Resolution effectiveness (discrepancies resolved vs. pending/overdue)
+-- Financial accuracy (zero unauthorized adjustments to claim/payment amounts)
+-- System performance (reconciliation query response < 50ms average)
+-- Data quality scores (valid format compliance for amounts and dates)
+-- Audit readiness (availability and integrity of reconciliation records)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.2. Active Education Recommendations View
+--
+-- View Name: governance.vw_active_education_recommendations
+-- Business Case: Help training coordinators and healthcare providers focus on pending educational recommendations that require attention or action, ensuring continuous professional development and compliance with evolving healthcare standards. This system filters education_recommendations to show only those with completed = FALSE and relevant status, ordered by priority and creation date, supporting proactive learning management and skill enhancement initiatives.
+-- Purpose: Serve as a filtered view of the education_recommendations table showing only active, uncompleted recommendations with essential metadata including unique recommendation identifiers, provider references, recommendation types, detailed text descriptions, priority classifications, completion status flags, and creation timestamps. It enables systematic education management by providing structured data for recommendation tracking, supports learning operations through organized recommendation information, facilitates compliance reporting by maintaining clear educational requirements, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader training and professional development workflows to support complete recommendation lifecycle management from assignment through completion and verification.
+-- KPIs:
+-- Recommendation coverage (percentage of providers with active educational recommendations)
+-- Completion tracking effectiveness (recommendations completed vs. pending/overdue)
+-- Priority adherence (high-priority recommendations addressed before low-priority)
+-- Educational impact metrics (correlation between recommendations and performance improvement)
+-- System performance (recommendation query response < 30ms average)
+-- Data quality scores (valid format compliance for recommendation types and priorities)
+-- Audit readiness (availability and integrity of recommendation records)
+--
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.3. Claim Status Timeline View
+--
+-- View Name: ohip_core.vw_claim_status_timeline
+-- Business Case: Provide billing staff and healthcare administrators with a chronological view of all status changes for specific claims, aiding in troubleshooting, customer service, and compliance investigations by enabling reconstruction of claim processing sequences. This system joins claims with claim_audit_log to display a timeline of status transitions and modification details for each claim, supporting transparent claim management and regulatory compliance requirements.
+-- Purpose: Serve as a chronological view combining data from claims and claim_audit_log tables to show claim status evolution including claim identifiers, status change timestamps, previous and new status values, user identities responsible for changes, and detailed change descriptions. It enables systematic claim tracking by providing structured data for status history, supports audit governance through organized status information, facilitates compliance reporting by maintaining complete status trails, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader billing and compliance workflows to support complete claim lifecycle management from submission through final resolution and audit reporting.
+-- KPIs:
+-- Status tracking completeness (percentage of claims with complete status history)
+-- Timeline accuracy (proper sequencing of status changes and timestamps)
+-- Audit trail integrity (immutable records of all status transitions)
+-- Claim resolution timeliness (average time from submission to final status)
+-- System performance (status timeline query response < 40ms average)
+-- Data quality scores (valid format compliance for status values and timestamps)
+-- Compliance adherence (adherence to status change documentation standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.4. High-Risk Claims View
+--
+-- View Name: analytics.vw_high_risk_claims
+-- Business Case: Allow billing teams and risk managers to prioritize review of claims with a high predicted risk of denial, improving first-pass success rates and reducing administrative burden through proactive intervention strategies. This system selects from claim_denial_predictions where denial_risk exceeds defined thresholds, joined with claims for full context, supporting targeted claim quality management and revenue cycle optimization.
+-- Purpose: Serve as a filtered view combining data from claim_denial_predictions and claims tables to identify high-risk billing submissions including claim identifiers, denial risk scores, predicted denial reasons, recommended corrective actions, current claim status, service dates, provider and clinic references, and creation timestamps. It enables systematic risk management by providing structured data for claim prioritization, supports billing operations through organized risk information, facilitates compliance reporting by maintaining clear risk assessments, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader denial management and analytics workflows to support complete risk lifecycle management from prediction through intervention and outcome tracking.
+-- KPIs:
+-- Risk identification completeness (percentage of claims with risk assessments)
+-- Prediction accuracy metrics (predicted vs. actual denial correlations)
+-- Intervention effectiveness (high-risk claims reviewed vs. auto-submitted)
+-- Denial rate reduction (correlation between risk-based reviews and lower denials)
+-- System performance (risk query response < 35ms average)
+-- Data quality scores (valid format compliance for risk scores and reasons)
+-- Audit readiness (availability and integrity of risk assessment records)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.5. Patient Communication Preferences Summary View
+--
+-- View Name: ohip_core.vw_patient_communication_preferences_summary
+-- Business Case: Enable healthcare staff to quickly see patients' preferred communication methods and opt-out status for different communication types, ensuring respectful and effective patient engagement while maintaining compliance with privacy regulations. This system aggregates data from patient_communication_preferences to show consolidated preference views, supporting personalized communication strategies and regulatory adherence.
+-- Purpose: Serve as a consolidated view of the patient_communication_preferences table showing patient communication choices including patient identifiers, communication type classifications, preferred delivery methods, opt-out status flags, last updated timestamps, and preference validity periods. It enables systematic communication management by providing structured data for preference tracking, supports patient relations through organized preference information, facilitates compliance reporting by maintaining clear consent records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader patient engagement and privacy workflows to support complete communication lifecycle management from preference capture through application and compliance verification.
+-- KPIs:
+-- Preference data completeness (percentage of patients with complete communication preferences)
+-- Opt-out rate tracking (patients choosing to opt out of specific communication types)
+-- Preference adherence metrics (communications sent via preferred methods)
+-- Communication success rates (delivery/read rates by preferred method)
+-- System performance (preference query response < 25ms average)
+-- Data quality scores (valid format compliance for preference types and methods)
+-- Privacy compliance (adherence to communication preference standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.6. Recent Policy Changes View
+--
+-- View Name: governance.vw_recent_policy_changes
+-- Business Case: Keep stakeholders informed about recent updates to organizational policies that may affect their work, ensuring awareness and compliance with evolving governance requirements. This system selects from policy_changes ordered by created_at to show the most recent policy modifications, supporting continuous policy awareness and implementation tracking.
+-- Purpose: Serve as a chronological view of the policy_changes table showing recent governance policy updates including unique change identifiers, policy references, change descriptions, business justifications, requesting and approving provider identities, approval dates, implementation deadlines, current status classifications, and creation timestamps. It enables systematic policy management by providing structured data for change tracking, supports governance operations through organized change information, facilitates compliance reporting by maintaining clear policy evolution records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader governance and policy workflows to support complete change lifecycle management from proposal through approval, implementation, and communication.
+-- KPIs:
+-- Change tracking completeness (percentage of policy modifications with complete change records)
+-- Approval timeliness metrics (changes approved within required timeframes)
+-- Implementation tracking (changes implemented by target dates)
+-- Policy awareness rates (stakeholders notified of changes promptly)
+-- System performance (change query response < 30ms average)
+-- Data quality scores (valid format compliance for change descriptions and dates)
+-- Governance compliance (adherence to policy change documentation standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.7. Active Audit Findings View
+--
+-- View Name: governance.vw_active_audit_findings
+-- Business Case: Help compliance officers track outstanding audit findings that require resolution or further action, ensuring timely remediation and continuous improvement in governance practices. This system filters audit_findings to show findings with status 'open' or 'in_progress', supporting proactive audit management and regulatory compliance.
+-- Purpose: Serve as a filtered view of the audit_findings table showing unresolved audit observations including unique finding identifiers, audit instance references, detailed finding descriptions, finding type classifications, severity level indicators, supporting evidence documentation, current resolution status flags, resolution notes, completion dates, responsible provider identities, and creation timestamps. It enables systematic audit management by providing structured data for finding tracking, supports compliance operations through organized finding information, facilitates governance reporting by maintaining clear audit trails, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader audit and governance workflows to support complete finding lifecycle management from identification through assignment, resolution, and verification.
+-- KPIs:
+-- Finding resolution completeness (findings resolved vs. pending/overdue)
+-- Resolution timeliness metrics (findings resolved within target timeframes)
+-- Severity distribution tracking (findings by low/medium/high/critical levels)
+-- Audit effectiveness (reduction in recurring finding types)
+-- System performance (finding query response < 40ms average)
+-- Data quality scores (valid format compliance for finding descriptions and evidence)
+-- Governance compliance (adherence to audit finding resolution standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  14.8. Provider Coding Accuracy Snapshot View
+--
+-- View Name: governance.vw_provider_coding_accuracy_snapshot
+-- Business Case: Provide clinic managers and quality assurance teams with a quick snapshot of individual provider coding accuracy performance based on AI validation results, enabling targeted training and performance improvement initiatives. This system aggregates data from coding_accuracy grouped by provider_id to show recent accuracy rates and trends, supporting data-driven provider development and billing optimization.
+-- Purpose: Serve as an aggregated view of the coding_accuracy table showing provider-level coding performance including provider identifiers, accuracy calculation periods, accepted vs. suggested code counts, calculated accuracy percentages, confidence scores, trend indicators, and creation timestamps. It enables systematic performance management by providing structured data for accuracy tracking, supports quality assurance through organized performance information, facilitates training program development by identifying skill gaps, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader quality and education workflows to support complete accuracy lifecycle management from measurement through analysis and targeted improvement planning.
+-- KPIs:
+-- Accuracy measurement completeness (providers with complete accuracy assessments)
+-- Performance trending metrics (improvement or decline in coding accuracy over time)
+-- Training effectiveness (correlation between accuracy scores and educational interventions)
+-- Provider acceptance rates (codes accepted vs. rejected by providers)
+-- System performance (accuracy query response < 35ms average)
+-- Data quality scores (valid format compliance for accuracy calculations)
+-- Audit readiness (availability and integrity of accuracy records)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--
+-- 15.1. Payment Reconciliation Detail View
+--
+-- View Name: ohip_core.vw_payment_reconciliation_detail
+-- Business Case: Enable finance teams to perform detailed reconciliation of payments received against submitted claims by providing a comprehensive view that links payment records with their corresponding claims and any discrepancies. This system supports financial accuracy by showing claimed amounts, payment amounts, differences, and reconciliation status for each claim-payment pair, facilitating prompt identification and resolution of mismatches. It ensures accountability by maintaining audit trails of all reconciliation activities, supports compliance by documenting payment accuracy, and maintains data integrity by ensuring proper linkage between payments and claims.
+-- Purpose: Serve as the central view for detailed payment reconciliation by joining payments with claims to show reconciliation data including payment identifiers, claim identifiers, claimed amounts, payment amounts, differences, and reconciliation status. It enables systematic financial reconciliation by providing structured data for payment tracking, supports audit governance through organized reconciliation information, facilitates compliance reporting by maintaining detailed payment records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader financial workflows to support complete reconciliation lifecycle management from identification through resolution and reporting.
+-- KPIs:
+-- Payment reconciliation completeness (percentage of payments with complete claim linkage)
+-- Discrepancy identification rate (payments with identified amount differences)
+-- Reconciliation timeliness (payments reconciled within required timeframes)
+-- Financial accuracy (zero unauthorized adjustments to payment amounts)
+-- System performance (reconciliation query response < 40ms average)
+-- Data quality scores (valid format compliance for amounts and reconciliation status)
+-- Audit readiness (availability and integrity of reconciliation records for reviews)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  15.2. Active Education Recommendations Detail View
+--
+-- View Name: governance.vw_active_education_recommendations_detail
+-- Business Case: Help training coordinators and healthcare providers focus on pending educational recommendations that require immediate attention by providing a detailed view of uncompleted recommendations with priority levels and due dates. This system supports continuous learning by filtering recommendations based on completion status, enables proactive education management by highlighting high-priority items, ensures accountability by maintaining clear visibility of educational obligations, supports compliance by tracking recommendation fulfillment, and maintains audit trails of all educational activities for governance purposes.
+-- Purpose: Serve as the filtered view for active education recommendations by selecting from education_recommendations where completed = FALSE and showing detailed recommendation information including unique identifiers, provider references, recommendation types, detailed text descriptions, priority levels, completion status flags, and due dates. It enables systematic education management by providing structured data for recommendation tracking, supports learning operations through organized recommendation information, facilitates compliance reporting by maintaining detailed educational records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader training workflows to support complete recommendation lifecycle management from assignment through completion and verification.
+-- KPIs:
+-- Recommendation completion rate (completed vs. pending/overdue recommendations)
+-- Priority adherence metrics (high-priority recommendations addressed before low-priority)
+-- Timeliness of completion (recommendations completed by due dates vs. overdue)
+-- Educational impact tracking (correlation between recommendations and performance improvement)
+-- System performance (recommendation query response < 30ms average)
+-- Data quality scores (valid format compliance for recommendation types and priorities)
+-- Audit readiness (availability and integrity of recommendation records for reviews)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  15.3. Claim Status Timeline Detail View
+--
+-- View Name: ohip_core.vw_claim_status_timeline_detail
+-- Business Case: Provide billing staff and healthcare administrators with a chronological view of all status changes for specific claims, aiding in troubleshooting, customer service, and compliance investigations by enabling reconstruction of claim processing sequences. This system supports claim management by showing the complete history of status transitions, enables root cause analysis by identifying processing delays or bottlenecks, ensures accountability by maintaining audit trails of all status changes, supports compliance by documenting claim lifecycle events, and maintains data integrity by ensuring proper sequencing of status transitions.
+-- Purpose: Serve as the chronological view for claim status changes by joining claims with claim_audit_log to show status timeline data including claim identifiers, status change timestamps, previous and new status values, user identities responsible for changes, and detailed change descriptions. It enables systematic claim tracking by providing structured data for status history, supports audit governance through organized status information, facilitates compliance reporting by maintaining detailed claim records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader billing workflows to support complete status lifecycle management from creation through final resolution and audit reporting.
+-- KPIs:
+-- Status tracking completeness (percentage of claims with complete status history)
+-- Timeline accuracy (proper sequencing of status changes and timestamps)
+-- Audit trail integrity (immutable records of all status transitions)
+-- Claim resolution timeliness (average time from submission to final status)
+-- System performance (status timeline query response < 50ms average)
+-- Data quality scores (valid format compliance for status values and timestamps)
+-- Compliance adherence (adherence to status change documentation standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  15.4. High-Risk Claims Detail View
+--
+-- View Name: analytics.vw_high_risk_claims_detail
+-- Business Case: Allow billing teams and risk managers to prioritize review of claims with a high predicted risk of denial by providing a detailed view of high-risk claims with their associated prediction scores and recommended actions. This system supports proactive denial management by highlighting claims requiring attention, enables targeted intervention by showing specific risk factors, ensures accountability by maintaining audit trails of risk assessments, supports compliance by documenting risk-based review decisions, and maintains data integrity by ensuring proper risk score calculations.
+--  Purpose: Serve as the filtered view for high-risk claims by selecting from claim_denial_predictions where denial_risk exceeds defined thresholds and joining with claims for full context, showing detailed risk information including claim identifiers, denial risk scores, predicted denial reasons, recommended corrective actions, current claim status, service dates, provider and clinic references, and creation timestamps. It enables systematic risk management by providing structured data for claim prioritization, supports billing operations through organized risk information, facilitates compliance reporting by maintaining detailed risk records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader analytics workflows to support complete risk lifecycle management from prediction through intervention and outcome tracking.
+-- KPIs:
+-- Risk identification completeness (percentage of claims with risk assessments)
+-- Prediction accuracy metrics (predicted vs. actual denial correlations)
+-- Intervention effectiveness (high-risk claims reviewed vs. auto-submitted)
+-- Denial rate reduction (correlation between risk-based reviews and lower denials)
+-- System performance (risk query response < 35ms average)
+-- Data quality scores (valid format compliance for risk scores and reasons)
+-- Audit readiness (availability and integrity of risk assessment records for reviews)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  15.5. Patient Communication Preferences Detail View
+--
+-- View Name: ohip_core.vw_patient_communication_preferences_detail
+-- Business Case: Enable healthcare staff to quickly see patients' preferred communication methods and opt-out status for different communication types by providing a consolidated view of communication preferences, ensuring respectful and effective patient engagement while maintaining compliance with privacy regulations. This system supports patient relations by enabling personalized communication strategies, facilitates compliance by respecting patient preferences, ensures accountability by maintaining audit trails of preference changes, supports quality improvement by tracking communication effectiveness, and maintains data integrity by ensuring proper preference documentation.
+--  Purpose: Serve as the consolidated view for patient communication preferences by aggregating data from patient_communication_preferences to show preference summaries including patient identifiers, communication type classifications, preferred delivery methods, opt-out status flags, last updated timestamps, and preference validity periods. It enables systematic communication management by providing structured data for preference tracking, supports patient relations through organized preference information, facilitates compliance reporting by maintaining detailed consent records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader communication workflows to support complete preference lifecycle management from capture through application and compliance verification.
+--  KPIs:
+-- Preference data completeness (percentage of patients with complete communication preferences)
+-- Opt-out rate tracking (patients choosing to opt out of specific communication types)
+-- Preference adherence metrics (communications sent via preferred methods)
+-- Communication success rates (delivery/read rates by preferred method)
+-- System performance (preference query response < 25ms average)
+-- Data quality scores (valid format compliance for preference types and methods)
+-- Privacy compliance (adherence to communication preference standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  15.6. Recent Policy Changes Detail View
+--
+-- View Name: governance.vw_recent_policy_changes_detail
+--  Business Case: Keep stakeholders informed about recent updates to governance policies that may affect their work by providing a detailed chronological view of policy modifications with descriptions and effective dates. This system supports policy governance by ensuring awareness of changes, enables compliance by documenting policy evolution, ensures accountability by maintaining audit trails of policy modifications, supports continuous improvement by tracking policy effectiveness, and maintains data integrity by ensuring proper change documentation.
+-- Purpose: Serve as the chronological view for recent policy changes by selecting from policy_changes ordered by created_at to show detailed change information including unique change identifiers, policy references, change descriptions, business justifications, requesting and approving provider identities, approval dates, implementation deadlines, current status classifications, and creation timestamps. It enables systematic policy management by providing structured data for change tracking, supports governance operations through organized change information, facilitates compliance reporting by maintaining detailed policy records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader governance workflows to support complete change lifecycle management from proposal through approval, implementation, and communication.
+-- KPIs:
+-- Change tracking completeness (percentage of policy modifications with complete change records)
+-- Approval timeliness metrics (changes approved within required timeframes)
+-- Implementation tracking (changes implemented by target dates vs. delayed)
+-- Policy awareness rates (stakeholders notified of changes promptly)
+-- System performance (change query response < 30ms average)
+-- Data quality scores (valid format compliance for change descriptions and dates)
+-- Governance compliance (adherence to policy change documentation standards)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--  15.7. Active Audit Findings Detail View
+--
+-- View Name: governance.vw_active_audit_findings_detail
+-- Business Case: Help compliance officers track outstanding audit findings that require resolution or further action by providing a detailed view of unresolved findings with severity levels and due dates. This system supports audit program governance by ensuring visibility of pending issues, enables proactive compliance management by highlighting critical findings, ensures accountability by maintaining audit trails of finding resolution, supports continuous improvement by tracking finding recurrence, and maintains data integrity by ensuring proper finding documentation.
+-- Purpose: Serve as the filtered view for active audit findings by selecting from audit_findings where status is 'open' or 'in_progress', showing detailed finding information including unique finding identifiers, audit instance references, detailed finding descriptions, finding type classifications, severity level indicators, supporting evidence documentation, current resolution status flags, resolution notes, completion dates, responsible provider identities, and creation timestamps. It enables systematic audit management by providing structured data for finding tracking, supports compliance operations through organized finding information, facilitates governance reporting by maintaining detailed audit records, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader audit workflows to support complete finding lifecycle management from identification through assignment, resolution, and verification.
+--  KPIs:
+-- Finding resolution completeness (findings resolved vs. pending/overdue)
+-- Resolution timeliness metrics (findings resolved within target timeframes)
+-- Severity distribution tracking (findings by low/medium/high/critical levels)
+-- Audit effectiveness (reduction in recurring finding types)
+-- System performance (finding query response < 40ms average)
+-- Data quality scores (valid format compliance for finding descriptions and evidence)
+-- Audit readiness (availability and integrity of finding records for compliance reviews)
+--
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
+--
+--
+--  15.8. Provider Coding Accuracy Detail View
+--
+-- View Name: governance.vw_provider_coding_accuracy_detail
+-- Business Case: Provide clinic managers and quality assurance teams with a detailed snapshot of individual provider coding accuracy performance based on AI validation results, enabling targeted training and performance improvement initiatives. This system supports quality management by providing objective accuracy measurements, enables continuous improvement by identifying coding gaps, ensures accountability by maintaining audit trails of accuracy assessments, supports compliance by documenting coding quality, and maintains data integrity by ensuring proper accuracy calculations.
+-- Purpose: Serve as the aggregated view for provider coding accuracy by selecting from coding_accuracy grouped by provider_id to show detailed accuracy information including provider identifiers, accuracy calculation periods, accepted vs. suggested code counts, calculated accuracy percentages, confidence scores, trend indicators, and creation timestamps. It enables systematic performance management by providing structured data for accuracy tracking, supports quality assurance through organized performance information, facilitates training program development by identifying skill gaps, ensures data integrity through appropriate constraints and foreign key relationships, and integrates with broader quality workflows to support complete accuracy lifecycle management from measurement through analysis and targeted improvement planning.
+-- KPIs:
+-- Accuracy measurement completeness (providers with complete accuracy assessments)
+-- Performance trending metrics (improvement or decline in coding accuracy over time)
+-- Training effectiveness (correlation between accuracy scores and educational interventions)
+-- Provider acceptance rates (codes accepted vs. rejected by providers)
+-- System performance (accuracy query response < 35ms average)
+-- Data quality scores (valid format compliance for accuracy calculations)
+-- Audit readiness (availability and integrity of accuracy records for reviews)
+-- -- ----===============================================
+-- --
+-- --
+-- --
+-- --
+-- -- ----===============================================
