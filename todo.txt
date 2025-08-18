@@ -5,3 +5,8 @@
 1. build an online airline reservation platform for blockchain and give it for free to all airlines to avoid scammers, scamming customers like how they did it to me.
   --Immutable records, escrow payments, refunds via smart contract, IPFS integration., web3, rinkeby/mainnet
 2. need to add bombora and semrush style internal analytics and taxonmy features
+
+Provenance Tracking Ontology 
+https://www.w3.org/TR/prov-o/ -- recommended vocabulary standard for semantic tagging (creator/modifier)
+QUDT - for units and quantities (e.g., HP, USD). https://qudt.org/
+SAREF -for smart appliances (if IoT-enabled) https://saref.etsi.org/
