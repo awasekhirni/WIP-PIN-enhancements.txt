@@ -10,3 +10,8 @@ Provenance Tracking Ontology
 https://www.w3.org/TR/prov-o/ -- recommended vocabulary standard for semantic tagging (creator/modifier)
 QUDT - for units and quantities (e.g., HP, USD). https://qudt.org/
 SAREF -for smart appliances (if IoT-enabled) https://saref.etsi.org/
+
+Apache Office Extension 
+-- need to look at including Ai agent that could type notes, what i dictate saving time 
+-- need to look at auto formating options that would save a ton of my time for formating the PRD, technical architecture documents
+-- include mermaidjs diagrams in a more printer/document friendly format  A4.
