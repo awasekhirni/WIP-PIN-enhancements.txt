@@ -15,3 +15,14 @@ Apache Office Extension
 -- need to look at including Ai agent that could type notes, what i dictate saving time 
 -- need to look at auto formating options that would save a ton of my time for formating the PRD, technical architecture documents
 -- include mermaidjs diagrams in a more printer/document friendly format  A4.
+
+Standards to read 
+-- NIST AI Risk Management Framework 
+-- ISO/IEC 42001 (AI Management System)
+W3 PROV Model
+FHIR healthcare interoperability 
+Digital Twin Consortium Reference Architecture 
+OECD AI Principles 
+EU AI Act Compliance Guidelines (2024)
+
+
