@@ -1,9 +1,9 @@
 -- =============================================
 -- PostgreSQL Schema for Enterprise Risk Management with 11 Modules
--- Version: 3.0
--- Copyright 2025 All rights reserved β ORI Inc.
+-- Version: 4.0
+-- Copyright 2025 All rights reserved β ORI Inc.Canada
 -- Created: 2025-05-29
--- Last Updated: 2025-07-09
+-- Last Updated: 2025-08-09
 --Author: Awase Khirni Syed
 -- Description: Comprehensive schema for Enterprise Risk Management
 --              with advanced features for data governance, analytics, and compliance
@@ -28778,11 +28778,6638 @@ $$;
 CREATE SCHEMA IF NOT EXISTS cmbc;
 COMMENT ON SCHEMA cmbc IS 'Schema for Crisis Management and Business Continuity data, including BCP, risk assessments, incident management, and recovery tracking';
 
+CREATE TABLE cmbc.business_continuity_plans (
+    bcp_id SERIAL PRIMARY KEY,
+    plan_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    version VARCHAR(50) NOT NULL,
+    effective_date DATE NOT NULL,
+    review_frequency_months INTEGER NOT NULL,
+    last_review_date DATE,
+    next_review_date DATE GENERATED ALWAYS AS (last_review_date + (review_frequency_months * INTERVAL '1 month')) STORED,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Draft', 'Active', 'Under Review', 'Retired')),
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    approval_date DATE,
+    approved_by VARCHAR(100)
+);
 
-----------------------
+COMMENT ON TABLE cmbc.business_continuity_plans IS 'Master table for all Business Continuity Plans (BCPs) in the organization';
+COMMENT ON COLUMN cmbc.business_continuity_plans.review_frequency_months IS 'Frequency in months for mandatory plan reviews';
+COMMENT ON COLUMN cmbc.business_continuity_plans.status IS 'Current lifecycle status of the BCP document';
+
+
+CREATE TABLE cmbc.critical_business_processes (
+    process_id SERIAL PRIMARY KEY,
+    process_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    department VARCHAR(100) NOT NULL,
+    owner VARCHAR(100) NOT NULL,
+    max_tolerable_downtime_hours INTEGER NOT NULL,
+    recovery_priority INTEGER NOT NULL CHECK (recovery_priority BETWEEN 1 AND 5),
+    data_criticality VARCHAR(50) NOT NULL CHECK (data_criticality IN ('Low', 'Medium', 'High', 'Critical')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (process_name, department)
+);
+
+COMMENT ON TABLE cmbc.critical_business_processes IS 'Identifies and categorizes critical business processes for BIA and recovery prioritization';
+COMMENT ON COLUMN cmbc.critical_business_processes.recovery_priority IS 'Priority level for recovery (1=highest, 5=lowest)';
+
+CREATE TABLE cmbc.business_impact_analysis (
+    bia_id SERIAL PRIMARY KEY,
+    process_id INTEGER NOT NULL REFERENCES cmbc.critical_business_processes(process_id),
+    bcp_id INTEGER NOT NULL REFERENCES cmbc.business_continuity_plans(bcp_id),
+    financial_impact_per_hour NUMERIC(15,2) NOT NULL,
+    operational_impact_level VARCHAR(50) NOT NULL CHECK (operational_impact_level IN ('Low', 'Medium', 'High', 'Critical')),
+    legal_compliance_impact TEXT,
+    customer_impact TEXT,
+    reputation_impact TEXT,
+    dependencies TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (process_id, bcp_id)
+);
+
+COMMENT ON TABLE cmbc.business_impact_analysis IS 'Detailed impact analysis for each critical business process within a BCP';
+COMMENT ON COLUMN cmbc.business_impact_analysis.financial_impact_per_hour IS 'Estimated financial loss per hour of downtime';
+
+CREATE TABLE cmbc.business_impact_analysis (
+    bia_id SERIAL PRIMARY KEY,
+    process_id INTEGER NOT NULL REFERENCES cmbc.critical_business_processes(process_id),
+    bcp_id INTEGER NOT NULL REFERENCES cmbc.business_continuity_plans(bcp_id),
+    financial_impact_per_hour NUMERIC(15,2) NOT NULL,
+    operational_impact_level VARCHAR(50) NOT NULL CHECK (operational_impact_level IN ('Low', 'Medium', 'High', 'Critical')),
+    legal_compliance_impact TEXT,
+    customer_impact TEXT,
+    reputation_impact TEXT,
+    dependencies TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (process_id, bcp_id)
+);
+
+COMMENT ON TABLE cmbc.business_impact_analysis IS 'Detailed impact analysis for each critical business process within a BCP';
+COMMENT ON COLUMN cmbc.business_impact_analysis.financial_impact_per_hour IS 'Estimated financial loss per hour of downtime';
+
+CREATE TABLE cmbc.recovery_objectives (
+    objective_id SERIAL PRIMARY KEY,
+    process_id INTEGER NOT NULL REFERENCES cmbc.critical_business_processes(process_id),
+    bcp_id INTEGER NOT NULL REFERENCES cmbc.business_continuity_plans(bcp_id),
+    rto_hours NUMERIC(6,2) NOT NULL COMMENT 'Recovery Time Objective in hours',
+    rpo_minutes INTEGER NOT NULL COMMENT 'Recovery Point Objective in minutes (maximum data loss)',
+    mtd_hours NUMERIC(6,2) NOT NULL COMMENT 'Maximum Tolerable Downtime in hours',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (process_id, bcp_id)
+);
+
+COMMENT ON TABLE cmbc.recovery_objectives IS 'Defines RTO, RPO and MTD for each critical process in a BCP';
+
+CREATE TABLE cmbc.risk_assessments (
+    risk_id SERIAL PRIMARY KEY,
+    bcp_id INTEGER NOT NULL REFERENCES cmbc.business_continuity_plans(bcp_id),
+    risk_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) NOT NULL CHECK (category IN ('Natural', 'Technical', 'Human', 'Organizational', 'External')),
+    likelihood VARCHAR(20) NOT NULL CHECK (likelihood IN ('Rare', 'Unlikely', 'Possible', 'Likely', 'Almost Certain')),
+    impact VARCHAR(20) NOT NULL CHECK (impact IN ('Insignificant', 'Minor', 'Moderate', 'Major', 'Catastrophic')),
+    risk_score INTEGER GENERATED ALWAYS AS (
+        CASE
+            WHEN likelihood = 'Rare' AND impact = 'Insignificant' THEN 1
+            WHEN likelihood = 'Rare' AND impact = 'Minor' THEN 2
+            WHEN likelihood = 'Unlikely' AND impact = 'Insignificant' THEN 2
+            WHEN likelihood = 'Unlikely' AND impact = 'Minor' THEN 4
+            WHEN likelihood = 'Possible' AND impact = 'Moderate' THEN 9
+            WHEN likelihood = 'Likely' AND impact = 'Major' THEN 16
+            WHEN likelihood = 'Almost Certain' AND impact = 'Catastrophic' THEN 25
+            ELSE 0
+        END
+    ) STORED,
+    mitigation_strategy TEXT,
+    residual_risk_score INTEGER,
+    owner VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.risk_assessments IS 'Identifies and assesses risks to business continuity with mitigation strategies';
+
+CREATE TABLE cmbc.incidents (
+    incident_id SERIAL PRIMARY KEY,
+    incident_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    incident_type VARCHAR(100) NOT NULL CHECK (incident_type IN ('Cyber Attack', 'Natural Disaster', 'System Failure', 'Supply Chain', 'Workforce', 'Other')),
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Low', 'Medium', 'High', 'Critical')),
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Reported', 'Assessed', 'Contained', 'Recovering', 'Resolved', 'Closed')),
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE,
+    bcp_activated BOOLEAN DEFAULT FALSE,
+    bcp_id INTEGER REFERENCES cmbc.business_continuity_plans(bcp_id),
+    root_cause TEXT,
+    lessons_learned TEXT,
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.incidents IS 'Tracks all disruptive incidents and their resolution status';
+
+CREATE TABLE cmbc.incident_impacts (
+    impact_id SERIAL PRIMARY KEY,
+    incident_id INTEGER NOT NULL REFERENCES cmbc.incidents(incident_id),
+    process_id INTEGER NOT NULL REFERENCES cmbc.critical_business_processes(process_id),
+    downtime_hours NUMERIC(6,2) NOT NULL,
+    financial_impact NUMERIC(15,2) NOT NULL,
+    customer_impact_level VARCHAR(20) CHECK (customer_impact_level IN ('None', 'Low', 'Medium', 'High', 'Critical')),
+    reputation_impact_level VARCHAR(20) CHECK (reputation_impact_level IN ('None', 'Low', 'Medium', 'High', 'Critical')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.incident_impacts IS 'Records the specific impacts of an incident on critical business processes';
+
+CREATE TABLE cmbc.recovery_actions (
+    action_id SERIAL PRIMARY KEY,
+    incident_id INTEGER NOT NULL REFERENCES cmbc.incidents(incident_id),
+    process_id INTEGER NOT NULL REFERENCES cmbc.critical_business_processes(process_id),
+    action_description TEXT NOT NULL,
+    assigned_to VARCHAR(100) NOT NULL,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Pending', 'In Progress', 'Completed', 'Failed')),
+    start_time TIMESTAMP WITH TIME ZONE,
+    end_time TIMESTAMP WITH TIME ZONE,
+    rto_met BOOLEAN,
+    rpo_met BOOLEAN,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.recovery_actions IS 'Tracks specific recovery actions taken during incident response';
+
+CREATE TABLE cmbc.bcp_tests (
+    test_id SERIAL PRIMARY KEY,
+    bcp_id INTEGER NOT NULL REFERENCES cmbc.business_continuity_plans(bcp_id),
+    test_name VARCHAR(255) NOT NULL,
+    test_type VARCHAR(100) NOT NULL CHECK (test_type IN ('Tabletop', 'Walkthrough', 'Simulation', 'Full Interruption')),
+    test_date DATE NOT NULL,
+    test_scenario TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Planned', 'In Progress', 'Completed', 'Cancelled')),
+    results_summary TEXT,
+    success_rate_pct NUMERIC(5,2),
+    coordinator VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.bcp_tests IS 'Records all BCP testing activities and their outcomes';
+
+
+CREATE TABLE cmbc.bcp_tests (
+    test_id SERIAL PRIMARY KEY,
+    bcp_id INTEGER NOT NULL REFERENCES cmbc.business_continuity_plans(bcp_id),
+    test_name VARCHAR(255) NOT NULL,
+    test_type VARCHAR(100) NOT NULL CHECK (test_type IN ('Tabletop', 'Walkthrough', 'Simulation', 'Full Interruption')),
+    test_date DATE NOT NULL,
+    test_scenario TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Planned', 'In Progress', 'Completed', 'Cancelled')),
+    results_summary TEXT,
+    success_rate_pct NUMERIC(5,2),
+    coordinator VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.bcp_tests IS 'Records all BCP testing activities and their outcomes';
+
+
+CREATE TABLE cmbc.test_findings (
+    finding_id SERIAL PRIMARY KEY,
+    test_id INTEGER NOT NULL REFERENCES cmbc.bcp_tests(test_id),
+    process_id INTEGER REFERENCES cmbc.critical_business_processes(process_id),
+    finding_description TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Low', 'Medium', 'High', 'Critical')),
+    corrective_action TEXT,
+    assigned_to VARCHAR(100),
+    due_date DATE,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Open', 'In Progress', 'Resolved', 'Closed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.test_findings IS 'Identifies issues discovered during BCP testing and tracks their resolution';
+
+CREATE TABLE cmbc.communication_logs (
+    log_id SERIAL PRIMARY KEY,
+    incident_id INTEGER REFERENCES cmbc.incidents(incident_id),
+    test_id INTEGER REFERENCES cmbc.bcp_tests(test_id),
+    communication_type VARCHAR(50) NOT NULL CHECK (communication_type IN ('Alert', 'Update', 'Instruction', 'All Clear')),
+    channel VARCHAR(50) NOT NULL CHECK (channel IN ('Email', 'SMS', 'Phone', 'App', 'Website', 'Social Media')),
+    recipient_group VARCHAR(100) NOT NULL CHECK (recipient_group IN ('Employees', 'Management', 'Customers', 'Vendors', 'Public', 'Regulators')),
+    message TEXT NOT NULL,
+    sent_by VARCHAR(100) NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    delivery_status VARCHAR(50) NOT NULL CHECK (delivery_status IN ('Sent', 'Delivered', 'Failed', 'Read')),
+    response_received BOOLEAN DEFAULT FALSE,
+    response_details TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.communication_logs IS 'Logs all crisis communications during incidents and tests';
+
+CREATE TABLE cmbc.vendors (
+    vendor_id SERIAL PRIMARY KEY,
+    vendor_name VARCHAR(255) NOT NULL,
+    contact_name VARCHAR(100),
+    contact_email VARCHAR(100),
+    contact_phone VARCHAR(20),
+    service_provided TEXT NOT NULL,
+    criticality VARCHAR(20) NOT NULL CHECK (criticality IN ('Low', 'Medium', 'High', 'Critical')),
+    bcp_review_date DATE,
+    bcp_available BOOLEAN,
+    bcp_rating VARCHAR(20) CHECK (bcp_rating IN ('Poor', 'Adequate', 'Good', 'Excellent')),
+    contract_end_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.vendors IS 'Tracks third-party vendors and their business continuity preparedness';
+
+
+CREATE TABLE cmbc.vendor_risk_assessments (
+    assessment_id SERIAL PRIMARY KEY,
+    vendor_id INTEGER NOT NULL REFERENCES cmbc.vendors(vendor_id),
+    assessment_date DATE NOT NULL,
+    assessor VARCHAR(100) NOT NULL,
+    financial_stability_score INTEGER CHECK (financial_stability_score BETWEEN 1 AND 5),
+    operational_resilience_score INTEGER CHECK (operational_resilience_score BETWEEN 1 AND 5),
+    bcp_score INTEGER CHECK (bcp_score BETWEEN 1 AND 5),
+    recovery_capability_score INTEGER CHECK (recovery_capability_score BETWEEN 1 AND 5),
+    overall_risk_score NUMERIC(3,2) GENERATED ALWAYS AS (
+        (COALESCE(financial_stability_score, 3) +
+        COALESCE(operational_resilience_score, 3) +
+        COALESCE(bcp_score, 3) +
+        COALESCE(recovery_capability_score, 3)
+    ) / 4.0 STORED,
+    findings TEXT,
+    recommendations TEXT,
+    next_review_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.vendor_risk_assessments IS 'Records risk assessments performed on third-party vendors';
+
+
+CREATE TABLE cmbc.training_programs (
+    program_id SERIAL PRIMARY KEY,
+    program_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    target_audience VARCHAR(100) NOT NULL,
+    frequency_months INTEGER NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.training_programs IS 'Defines BCM training programs for different employee groups';
+
+CREATE TABLE cmbc.training_records (
+    record_id SERIAL PRIMARY KEY,
+    program_id INTEGER NOT NULL REFERENCES cmbc.training_programs(program_id),
+    employee_id VARCHAR(50) NOT NULL,
+    employee_name VARCHAR(100) NOT NULL,
+    training_date DATE NOT NULL,
+    trainer VARCHAR(100),
+    completion_status VARCHAR(50) NOT NULL CHECK (completion_status IN ('Completed', 'No Show', 'Partial')),
+    score NUMERIC(5,2),
+    feedback TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.training_records IS 'Tracks employee participation and performance in BCM training';
+
+
+CREATE TABLE cmbc.kpis (
+    kpi_id SERIAL PRIMARY KEY,
+    kpi_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(100) NOT NULL CHECK (category IN ('BCP', 'Risk', 'Recovery', 'Communication', 'Vendor', 'Training')),
+    measurement_unit VARCHAR(50) NOT NULL,
+    target_value NUMERIC(15,2) NOT NULL,
+    is_krm BOOLEAN NOT NULL DEFAULT FALSE,
+    frequency VARCHAR(50) NOT NULL CHECK (frequency IN ('Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual')),
+    owner VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.kpis IS 'Master list of all KPIs and KRMs for crisis management and business continuity';
+
+CREATE TABLE cmbc.kpi_measurements (
+    measurement_id SERIAL PRIMARY KEY,
+    kpi_id INTEGER NOT NULL REFERENCES cmbc.kpis(kpi_id),
+    measurement_period DATE NOT NULL,
+    actual_value NUMERIC(15,2) NOT NULL,
+    target_value NUMERIC(15,2) NOT NULL,
+    variance NUMERIC(15,2) GENERATED ALWAYS AS (actual_value - target_value) STORED,
+    variance_pct NUMERIC(5,2) GENERATED ALWAYS AS (
+        CASE
+            WHEN target_value = 0 THEN NULL
+            ELSE ((actual_value - target_value) / target_value) * 100
+        END
+    ) STORED,
+    notes TEXT,
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (kpi_id, measurement_period)
+);
+
+COMMENT ON TABLE cmbc.kpi_measurements IS 'Records periodic measurements of KPIs and KRMs';
+
+
+CREATE OR REPLACE VIEW cmbc.vw_bcp_summary AS
+SELECT
+    b.bcp_id,
+    b.plan_name,
+    b.version,
+    b.status,
+    b.effective_date,
+    b.next_review_date,
+    COUNT(DISTINCT cb.process_id) AS critical_processes_covered,
+    COUNT(DISTINCT t.test_id) AS tests_completed,
+    MAX(t.test_date) AS last_test_date,
+    AVG(t.success_rate_pct) AS avg_test_success_rate
+FROM
+    cmbc.business_continuity_plans b
+LEFT JOIN
+    cmbc.business_impact_analysis bia ON b.bcp_id = bia.bcp_id
+LEFT JOIN
+    cmbc.critical_business_processes cb ON bia.process_id = cb.process_id
+LEFT JOIN
+    cmbc.bcp_tests t ON b.bcp_id = t.bcp_id
+GROUP BY
+    b.bcp_id, b.plan_name, b.version, b.status, b.effective_date, b.next_review_date;
+
+COMMENT ON VIEW cmbc.vw_bcp_summary IS 'Provides a summary of each BCP including coverage and testing metrics';
+
+
+CREATE OR REPLACE VIEW cmbc.vw_risk_heatmap AS
+SELECT
+    r.risk_id,
+    r.risk_name,
+    r.category,
+    r.likelihood,
+    r.impact,
+    r.risk_score,
+    b.plan_name,
+    r.mitigation_strategy,
+    r.residual_risk_score,
+    r.owner,
+    r.updated_at
+FROM
+    cmbc.risk_assessments r
+JOIN
+    cmbc.business_continuity_plans b ON r.bcp_id = b.bcp_id
+ORDER BY
+    r.risk_score DESC;
+
+COMMENT ON VIEW cmbc.vw_risk_heatmap IS 'Displays all risks with their scores for visualization in a risk heatmap';
+
+
+CREATE OR REPLACE VIEW cmbc.vw_incident_recovery_tracking AS
+SELECT
+    i.incident_id,
+    i.incident_name,
+    i.start_time,
+    i.end_time,
+    i.severity,
+    i.status,
+    cb.process_name,
+    ro.rto_hours,
+    ro.rpo_minutes,
+    ii.downtime_hours,
+    CASE
+        WHEN ii.downtime_hours <= ro.rto_hours THEN 'Met'
+        ELSE 'Not Met'
+    END AS rto_status,
+    ra.action_description,
+    ra.status AS action_status,
+    ra.assigned_to,
+    ra.rto_met,
+    ra.rpo_met
+FROM
+    cmbc.incidents i
+JOIN
+    cmbc.incident_impacts ii ON i.incident_id = ii.incident_id
+JOIN
+    cmbc.critical_business_processes cb ON ii.process_id = cb.process_id
+JOIN
+    cmbc.recovery_objectives ro ON cb.process_id = ro.process_id AND i.bcp_id = ro.bcp_id
+LEFT JOIN
+    cmbc.recovery_actions ra ON i.incident_id = ra.incident_id AND cb.process_id = ra.process_id
+ORDER BY
+    i.start_time DESC, cb.recovery_priority;
+
+COMMENT ON VIEW cmbc.vw_incident_recovery_tracking IS 'Tracks recovery progress against RTO/RPO for active incidents';
+
+
+CREATE OR REPLACE VIEW cmbc.vw_vendor_risk_summary AS
+SELECT
+    v.vendor_id,
+    v.vendor_name,
+    v.service_provided,
+    v.criticality,
+    v.bcp_rating,
+    a.assessment_date,
+    a.overall_risk_score,
+    CASE
+        WHEN a.overall_risk_score <= 2.0 THEN 'Low Risk'
+        WHEN a.overall_risk_score <= 3.5 THEN 'Medium Risk'
+        ELSE 'High Risk'
+    END AS risk_level,
+    a.next_review_date,
+    DATEDIFF(DAY, CURRENT_DATE, a.next_review_date) AS days_until_next_review
+FROM
+    cmbc.vendors v
+JOIN
+    (SELECT
+        vendor_id,
+        MAX(assessment_date) AS latest_assessment
+     FROM
+        cmbc.vendor_risk_assessments
+     GROUP BY
+        vendor_id) latest ON v.vendor_id = latest.vendor_id
+JOIN
+    cmbc.vendor_risk_assessments a ON latest.vendor_id = a.vendor_id AND latest.latest_assessment = a.assessment_date
+ORDER BY
+    a.overall_risk_score DESC;
+
+COMMENT ON VIEW cmbc.vw_vendor_risk_summary IS 'Provides a summary of vendor risk based on latest assessments';
+
+CREATE OR REPLACE VIEW cmbc.vw_kpi_dashboard AS
+SELECT
+    k.kpi_id,
+    k.kpi_name,
+    k.description,
+    k.category,
+    k.measurement_unit,
+    k.target_value,
+    k.is_krm,
+    m.measurement_period,
+    m.actual_value,
+    m.variance,
+    m.variance_pct,
+    CASE
+        WHEN k.is_krm AND m.variance > 0 THEN 'Risk Increasing'
+        WHEN k.is_krm AND m.variance <= 0 THEN 'Risk Controlled'
+        WHEN NOT k.is_krm AND m.variance >= 0 THEN 'Target Met/Exceeded'
+        ELSE 'Target Not Met'
+    END AS status,
+    k.frequency,
+    k.owner
+FROM
+    cmbc.kpis k
+JOIN
+    (SELECT
+        kpi_id,
+        MAX(measurement_period) AS latest_period
+     FROM
+        cmbc.kpi_measurements
+     GROUP BY
+        kpi_id) latest ON k.kpi_id = latest.kpi_id
+JOIN
+    cmbc.kpi_measurements m ON latest.kpi_id = m.kpi_id AND latest.latest_period = m.measurement_period
+ORDER BY
+    k.category, k.kpi_name;
+
+COMMENT ON VIEW cmbc.vw_kpi_dashboard IS 'Dashboard view showing latest KPI/KRM measurements against targets';
+
+
+CREATE MATERIALIZED VIEW cmbc.mv_bcp_testing_performance AS
+SELECT
+    b.bcp_id,
+    b.plan_name,
+    COUNT(t.test_id) AS total_tests,
+    SUM(CASE WHEN t.status = 'Completed' THEN 1 ELSE 0 END) AS completed_tests,
+    AVG(t.success_rate_pct) AS avg_success_rate,
+    MAX(t.test_date) AS last_test_date,
+    COUNT(f.finding_id) AS total_findings,
+    SUM(CASE WHEN f.severity = 'Critical' THEN 1 ELSE 0 END) AS critical_findings,
+    SUM(CASE WHEN f.status = 'Open' THEN 1 ELSE 0 END) AS open_findings
+FROM
+    cmbc.business_continuity_plans b
+LEFT JOIN
+    cmbc.bcp_tests t ON b.bcp_id = t.bcp_id
+LEFT JOIN
+    cmbc.test_findings f ON t.test_id = f.test_id
+GROUP BY
+    b.bcp_id, b.plan_name;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_bcp_testing_performance IS 'Aggregated view of BCP testing performance with finding statistics';
+
+CREATE MATERIALIZED VIEW cmbc.mv_incident_trends AS
+SELECT
+    DATE_TRUNC('month', i.start_time) AS month,
+    i.incident_type,
+    COUNT(i.incident_id) AS incident_count,
+    AVG(EXTRACT(EPOCH FROM (i.end_time - i.start_time))/3600) AS avg_duration_hours,
+    SUM(ii.financial_impact) AS total_financial_impact,
+    AVG(ii.downtime_hours) AS avg_downtime_hours,
+    COUNT(DISTINCT CASE WHEN i.severity = 'Critical' THEN i.incident_id END) AS critical_incidents
+FROM
+    cmbc.incidents i
+JOIN
+    cmbc.incident_impacts ii ON i.incident_id = ii.incident_id
+WHERE
+    i.status = 'Closed'
+GROUP BY
+    DATE_TRUNC('month', i.start_time), i.incident_type;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_incident_trends IS 'Monthly trends of incidents by type with impact metrics';
+
+CREATE MATERIALIZED VIEW cmbc.mv_recovery_compliance AS
+SELECT
+    cb.process_id,
+    cb.process_name,
+    cb.department,
+    COUNT(DISTINCT i.incident_id) AS total_incidents,
+    COUNT(DISTINCT CASE WHEN ii.downtime_hours <= ro.rto_hours THEN i.incident_id END) AS rto_met_count,
+    COUNT(DISTINCT CASE WHEN ra.rpo_met = TRUE THEN i.incident_id END) AS rpo_met_count,
+    COUNT(DISTINCT i.incident_id) - COUNT(DISTINCT CASE WHEN ii.downtime_hours <= ro.rto_hours THEN i.incident_id END) AS rto_missed_count,
+    AVG(ii.downtime_hours) AS avg_downtime_hours,
+    ro.rto_hours,
+    ro.rpo_minutes
+FROM
+    cmbc.critical_business_processes cb
+JOIN
+    cmbc.recovery_objectives ro ON cb.process_id = ro.process_id
+LEFT JOIN
+    cmbc.incident_impacts ii ON cb.process_id = ii.process_id
+LEFT JOIN
+    cmbc.incidents i ON ii.incident_id = i.incident_id AND i.status = 'Closed'
+LEFT JOIN
+    cmbc.recovery_actions ra ON i.incident_id = ra.incident_id AND cb.process_id = ra.process_id
+GROUP BY
+    cb.process_id, cb.process_name, cb.department, ro.rto_hours, ro.rpo_minutes;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_recovery_compliance IS 'Tracks compliance with RTO and RPO objectives by process';
+
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_create_incident(
+    p_incident_name VARCHAR(255),
+    p_description TEXT,
+    p_incident_type VARCHAR(100),
+    p_severity VARCHAR(20),
+    p_start_time TIMESTAMP WITH TIME ZONE,
+    p_created_by VARCHAR(100),
+    OUT p_incident_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO cmbc.incidents (
+        incident_name,
+        description,
+        incident_type,
+        severity,
+        status,
+        start_time,
+        created_by
+    ) VALUES (
+        p_incident_name,
+        p_description,
+        p_incident_type,
+        p_severity,
+        'Reported',
+        p_start_time,
+        p_created_by
+    ) RETURNING incident_id INTO p_incident_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_create_incident IS 'Creates a new incident record and returns the generated ID';
+
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_add_incident_impact(
+    p_incident_id INTEGER,
+    p_process_id INTEGER,
+    p_downtime_hours NUMERIC(6,2),
+    p_financial_impact NUMERIC(15,2),
+    p_customer_impact_level VARCHAR(20),
+    p_reputation_impact_level VARCHAR(20),
+    p_notes TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO cmbc.incident_impacts (
+        incident_id,
+        process_id,
+        downtime_hours,
+        financial_impact,
+        customer_impact_level,
+        reputation_impact_level,
+        notes
+    ) VALUES (
+        p_incident_id,
+        p_process_id,
+        p_downtime_hours,
+        p_financial_impact,
+        p_customer_impact_level,
+        p_reputation_impact_level,
+        p_notes
+    );
+
+    -- Update incident severity if needed based on impacts
+    UPDATE cmbc.incidents
+    SET severity = GREATEST(severity,
+        CASE
+            WHEN p_downtime_hours > 24 OR p_financial_impact > 100000 THEN 'Critical'
+            WHEN p_downtime_hours > 8 OR p_financial_impact > 50000 THEN 'High'
+            WHEN p_downtime_hours > 4 OR p_financial_impact > 10000 THEN 'Medium'
+            ELSE 'Low'
+        END)
+    WHERE incident_id = p_incident_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_add_incident_impact IS 'Records the impact of an incident on a specific business process and potentially updates incident severity';
+
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_schedule_bcp_test(
+    p_bcp_id INTEGER,
+    p_test_name VARCHAR(255),
+    p_test_type VARCHAR(100),
+    p_test_date DATE,
+    p_test_scenario TEXT,
+    p_coordinator VARCHAR(100),
+    OUT p_test_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO cmbc.bcp_tests (
+        bcp_id,
+        test_name,
+        test_type,
+        test_date,
+        test_scenario,
+        status,
+        coordinator
+    ) VALUES (
+        p_bcp_id,
+        p_test_name,
+        p_test_type,
+        p_test_date,
+        p_test_scenario,
+        'Planned',
+        p_coordinator
+    ) RETURNING test_id INTO p_test_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_schedule_bcp_test IS 'Schedules a new BCP test and returns the generated test ID';
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_record_test_finding(
+    p_test_id INTEGER,
+    p_process_id INTEGER,
+    p_finding_description TEXT,
+    p_severity VARCHAR(20),
+    p_corrective_action TEXT,
+    p_assigned_to VARCHAR(100),
+    p_due_date DATE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO cmbc.test_findings (
+        test_id,
+        process_id,
+        finding_description,
+        severity,
+        corrective_action,
+        assigned_to,
+        due_date,
+        status
+    ) VALUES (
+        p_test_id,
+        p_process_id,
+        p_finding_description,
+        p_severity,
+        p_corrective_action,
+        p_assigned_to,
+        p_due_date,
+        'Open'
+    );
+
+    -- Update test success rate if severity is high or critical
+    IF p_severity IN ('High', 'Critical') THEN
+        UPDATE cmbc.bcp_tests
+        SET success_rate_pct = COALESCE(success_rate_pct, 100) -
+            CASE
+                WHEN p_severity = 'High' THEN 10
+                ELSE 20
+            END
+        WHERE test_id = p_test_id;
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_record_test_finding IS 'Records a finding from a BCP test and updates test success metrics';
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_update_kpi_measurement(
+    p_kpi_id INTEGER,
+    p_measurement_period DATE,
+    p_actual_value NUMERIC(15,2),
+    p_notes TEXT,
+    p_created_by VARCHAR(100)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Delete existing measurement for this period if it exists
+    DELETE FROM cmbc.kpi_measurements
+    WHERE kpi_id = p_kpi_id AND measurement_period = p_measurement_period;
+
+    -- Insert new measurement
+    INSERT INTO cmbc.kpi_measurements (
+        kpi_id,
+        measurement_period,
+        actual_value,
+        target_value,
+        notes,
+        created_by
+    )
+    SELECT
+        p_kpi_id,
+        p_measurement_period,
+        p_actual_value,
+        k.target_value,
+        p_notes,
+        p_created_by
+    FROM
+        cmbc.kpis k
+    WHERE
+        k.kpi_id = p_kpi_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_update_kpi_measurement IS 'Updates or inserts a KPI measurement for a specific period';
+
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_perform_vendor_risk_assessment(
+    p_vendor_id INTEGER,
+    p_assessment_date DATE,
+    p_assessor VARCHAR(100),
+    p_financial_stability_score INTEGER,
+    p_operational_resilience_score INTEGER,
+    p_bcp_score INTEGER,
+    p_recovery_capability_score INTEGER,
+    p_findings TEXT,
+    p_recommendations TEXT,
+    p_next_review_months INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_next_review_date DATE;
+BEGIN
+    -- Calculate next review date
+    v_next_review_date := p_assessment_date + (p_next_review_months * INTERVAL '1 month');
+
+    -- Insert assessment
+    INSERT INTO cmbc.vendor_risk_assessments (
+        vendor_id,
+        assessment_date,
+        assessor,
+        financial_stability_score,
+        operational_resilience_score,
+        bcp_score,
+        recovery_capability_score,
+        findings,
+        recommendations,
+        next_review_date
+    ) VALUES (
+        p_vendor_id,
+        p_assessment_date,
+        p_assessor,
+        p_financial_stability_score,
+        p_operational_resilience_score,
+        p_bcp_score,
+        p_recovery_capability_score,
+        p_findings,
+        p_recommendations,
+        v_next_review_date
+    );
+
+    -- Update vendor BCP rating if provided
+    IF p_bcp_score IS NOT NULL THEN
+        UPDATE cmbc.vendors
+        SET
+            bcp_rating = CASE
+                            WHEN p_bcp_score >= 4.5 THEN 'Excellent'
+                            WHEN p_bcp_score >= 3.5 THEN 'Good'
+                            WHEN p_bcp_score >= 2.5 THEN 'Adequate'
+                            ELSE 'Poor'
+                          END,
+            bcp_review_date = p_assessment_date,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE vendor_id = p_vendor_id;
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_perform_vendor_risk_assessment IS 'Performs a comprehensive risk assessment of a vendor and updates vendor records';
+
+
+INSERT INTO cmbc.kpis (kpi_name, description, category, measurement_unit, target_value, is_krm, frequency, owner)
+VALUES
+('Business Impact Analysis (BIA) Coverage', 'Percentage of critical business processes covered by BIAs', 'BCP', '%', 100, FALSE, 'Annual', 'BCM Manager'),
+('Business Continuity Plan (BCP) Testing Frequency', 'Frequency of BCP testing', 'BCP', 'times/year', 1, FALSE, 'Annual', 'BCM Manager'),
+('Crisis Communication Effectiveness', 'Effectiveness of crisis communication efforts', 'Communication', '%', 90, FALSE, 'Quarterly', 'Communications Team'),
+('Recovery Time Objective (RTO) Achievement', 'Percentage of RTOs met during BCP tests', 'Recovery', '%', 95, TRUE, 'Quarterly', 'BCM Manager'),
+('System Availability for Crisis Management', 'Uptime of the Crisis Management module', 'Technical', '%', 99.9, TRUE, 'Monthly', 'IT Team'),
+('Incident Response Time', 'Time taken to initiate response after incident detection', 'Recovery', 'minutes', 30, TRUE, 'Monthly', 'Incident Manager'),
+('Third-Party Vendor BCM Compliance Rate', 'Percentage of critical vendors with acceptable BCM plans', 'Vendor', '%', 100, TRUE, 'Quarterly', 'Vendor Manager'),
+('Employee Training Completion Rate', 'Percentage of employees completing mandatory BCM training', 'Training', '%', 95, FALSE, 'Annual', 'HR Team'),
+('Data Breach Containment Time', 'Time to contain a data breach incident', 'Risk', 'hours', 4, TRUE, 'Monthly', 'Security Team'),
+('Backup Success Rate', 'Percentage of successful data backup operations', 'Technical', '%', 99.5, TRUE, 'Weekly', 'IT Team');
+
+
+-- Indexes for business_continuity_plans
+CREATE INDEX idx_bcp_status ON cmbc.business_continuity_plans(status);
+CREATE INDEX idx_bcp_review_date ON cmbc.business_continuity_plans(next_review_date);
+
+-- Indexes for critical_business_processes
+CREATE INDEX idx_process_department ON cmbc.critical_business_processes(department);
+CREATE INDEX idx_process_priority ON cmbc.critical_business_processes(recovery_priority);
+
+-- Indexes for incidents
+CREATE INDEX idx_incident_status ON cmbc.incidents(status);
+CREATE INDEX idx_incident_severity ON cmbc.incidents(severity);
+CREATE INDEX idx_incident_date ON cmbc.incidents(start_time);
+
+-- Indexes for recovery_actions
+CREATE INDEX idx_action_status ON cmbc.recovery_actions(status);
+CREATE INDEX idx_action_incident ON cmbc.recovery_actions(incident_id);
+
+-- Indexes for kpi_measurements
+CREATE INDEX idx_kpi_measurement_period ON cmbc.kpi_measurements(measurement_period);
+CREATE INDEX idx_kpi_id ON cmbc.kpi_measurements(kpi_id);
+
+-- Indexes for vendors
+CREATE INDEX idx_vendor_criticality ON cmbc.vendors(criticality);
+CREATE INDEX idx_vendor_bcp_rating ON cmbc.vendors(bcp_rating);
+
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_refresh_materialized_views()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW cmbc.mv_bcp_testing_performance;
+    REFRESH MATERIALIZED VIEW cmbc.mv_incident_trends;
+    REFRESH MATERIALIZED VIEW cmbc.mv_recovery_compliance;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_refresh_materialized_views IS 'Refreshes all materialized views in the CMBC schema';
+
+
+--creating a new Business Continutity planning
+INSERT INTO cmbc.business_continuity_plans (
+    plan_name,
+    description,
+    version,
+    effective_date,
+    review_frequency_months,
+    status,
+    created_by
+) VALUES (
+    'Corporate Headquarters BCP',
+    'Business Continuity Plan for Corporate Headquarters operations',
+    '1.0',
+    CURRENT_DATE,
+    12,
+    'Active',
+    'jane.doe@company.com'
+) RETURNING bcp_id;
+
+--adding a critical business process
+INSERT INTO cmbc.critical_business_processes (
+    process_name,
+    description,
+    department,
+    owner,
+    max_tolerable_downtime_hours,
+    recovery_priority,
+    data_criticality
+) VALUES (
+    'Payroll Processing',
+    'Monthly payroll processing for all employees',
+    'Finance',
+    'john.smith@company.com',
+    24,
+    1,
+    'Critical'
+) RETURNING process_id;
+
+
+--recording a new incident
+CALL cmbc.sp_create_incident(
+    p_incident_name := 'Data Center Power Outage',
+    p_description := 'Complete power outage at primary data center due to utility failure',
+    p_incident_type := 'System Failure',
+    p_severity := 'High',
+    p_start_time := '2023-11-15 14:30:00+00',
+    p_created_by := 'sara.johnson@company.com',
+    p_incident_id := NULL
+);
+
+
+--adding impact to an incident
+CALL cmbc.sp_add_incident_impact(
+    p_incident_id := 1,
+    p_process_id := 1,
+    p_downtime_hours := 6.5,
+    p_financial_impact := 125000.00,
+    p_customer_impact_level := 'Medium',
+    p_reputation_impact_level := 'Medium',
+    p_notes := 'Payroll delayed by one day causing employee dissatisfaction'
+);
+
+
+--scheduling a BCP test
+CALL cmbc.sp_schedule_bcp_test(
+    p_bcp_id := 1,
+    p_test_name := 'Q1 2024 Tabletop Exercise',
+    p_test_type := 'Tabletop',
+    p_test_date := '2024-03-15',
+    p_test_scenario := 'Simulated ransomware attack on primary systems',
+    p_coordinator := 'michael.brown@company.com',
+    p_test_id := NULL
+);
+
+--recording a test finding
+CALL cmbc.sp_record_test_finding(
+    p_test_id := 1,
+    p_process_id := 1,
+    p_finding_description := 'Payroll team lacked access to backup systems during test',
+    p_severity := 'High',
+    p_corrective_action := 'Implement secondary access controls and train team',
+    p_assigned_to := 'it.support@company.com',
+    p_due_date := '2025-07-09'
+);
+
+
+-- updating a KPI measurement
+CALL cmbc.sp_update_kpi_measurement(
+    p_kpi_id := 1,
+    p_measurement_period := '2025-07-09',
+    p_actual_value := 98.5,
+    p_notes := 'Two non-critical processes not yet assessed',
+    p_created_by := 'bcm.team@company.com'
+);
+
+--performing a vendor risk assessment
+CALL cmbc.sp_perform_vendor_risk_assessment(
+    p_vendor_id := 1,
+    p_assessment_date := '2025-07-09',
+    p_assessor := 'vendor.team@company.com',
+    p_financial_stability_score := 4,
+    p_operational_resilience_score := 3,
+    p_bcp_score := 4,
+    p_recovery_capability_score := 3,
+    p_findings := 'Strong financials but recovery procedures need documentation improvement',
+    p_recommendations := 'Request updated BCP documentation by Q1 2024',
+    p_next_review_months := 6
+);
+
+--alternative work locations
+CREATE TABLE cmbc.alternative_work_locations (
+    location_id SERIAL PRIMARY KEY,
+    location_name VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    capacity INTEGER NOT NULL,
+    available_from TIMESTAMP WITH TIME ZONE NOT NULL,
+    available_to TIMESTAMP WITH TIME ZONE NOT NULL,
+    facilities_description TEXT,
+    contact_person VARCHAR(100) NOT NULL,
+    contact_phone VARCHAR(20) NOT NULL,
+    department_coverage VARCHAR(100)[] NOT NULL, -- Array of departments that can use this location
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.alternative_work_locations IS 'Tracks alternative work locations available during disruptions to maintain operations';
+COMMENT ON COLUMN cmbc.alternative_work_locations.department_coverage IS 'Array of department names that can utilize this location during a disruption';
+
+--backup systems inventory
+CREATE TABLE cmbc.backup_systems (
+    system_id SERIAL PRIMARY KEY,
+    system_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    system_type VARCHAR(100) NOT NULL CHECK (system_type IN ('Data Backup', 'Application', 'Infrastructure', 'Network')),
+    primary_system_id INTEGER, -- Reference to the primary system this backs up
+    location VARCHAR(100) NOT NULL,
+    recovery_time_minutes INTEGER NOT NULL,
+    recovery_point_minutes INTEGER NOT NULL,
+    last_test_date DATE,
+    test_status VARCHAR(50) CHECK (test_status IN ('Success', 'Partial Success', 'Failed')),
+    owner VARCHAR(100) NOT NULL,
+    maintenance_schedule TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (primary_system_id) REFERENCES cmbc.backup_systems(system_id) ON DELETE SET NULL
+);
+
+COMMENT ON TABLE cmbc.backup_systems IS 'Inventory of all backup systems supporting business continuity with recovery capabilities';
+COMMENT ON COLUMN cmbc.backup_systems.recovery_time_minutes IS 'Estimated time to recover this system in minutes';
+
+
+--crisis managment team
+CREATE TABLE cmbc.crisis_management_team (
+    member_id SERIAL PRIMARY KEY,
+    employee_id VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    primary_contact VARCHAR(20) NOT NULL,
+    secondary_contact VARCHAR(20),
+    email VARCHAR(100) NOT NULL,
+    is_primary BOOLEAN NOT NULL DEFAULT TRUE,
+    backup_member_id INTEGER REFERENCES cmbc.crisis_management_team(member_id),
+    skills TEXT[],
+    training_completion_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (employee_id)
+);
+
+COMMENT ON TABLE cmbc.crisis_management_team IS 'Defines the crisis management team members with contact info and roles';
+COMMENT ON COLUMN cmbc.crisis_management_team.skills IS 'Array of relevant skills for crisis management (e.g., Incident Command, First Aid)';
+
+
+--supply chaiun dependencies
+CREATE TABLE cmbc.supply_chain_dependencies (
+    dependency_id SERIAL PRIMARY KEY,
+    item_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) NOT NULL CHECK (category IN ('Raw Material', 'Component', 'Service', 'Software', 'Other')),
+    criticality VARCHAR(20) NOT NULL CHECK (criticality IN ('Low', 'Medium', 'High', 'Critical')),
+    primary_vendor_id INTEGER REFERENCES cmbc.vendors(vendor_id),
+    secondary_vendor_id INTEGER REFERENCES cmbc.vendors(vendor_id),
+    lead_time_days INTEGER NOT NULL,
+    inventory_level VARCHAR(50),
+    max_tolerable_disruption_days INTEGER NOT NULL,
+    contingency_plan TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.supply_chain_dependencies IS 'Identifies critical supply chain dependencies and alternative sources';
+COMMENT ON COLUMN cmbc.supply_chain_dependencies.max_tolerable_disruption_days IS 'Maximum days the organization can tolerate disruption of this supply item';
+
+--regulatory compliance requirements
+CREATE TABLE cmbc.regulatory_requirements (
+    requirement_id SERIAL PRIMARY KEY,
+    regulation_name VARCHAR(255) NOT NULL,
+    jurisdiction VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    applicable_departments VARCHAR(100)[] NOT NULL,
+    compliance_deadline DATE,
+    compliance_status VARCHAR(50) NOT NULL CHECK (compliance_status IN ('Not Started', 'In Progress', 'Compliant', 'Non-Compliant')),
+    responsible_party VARCHAR(100) NOT NULL,
+    documentation_reference TEXT,
+    audit_frequency_months INTEGER,
+    last_audit_date DATE,
+    next_audit_date DATE GENERATED ALWAYS AS (
+        CASE
+            WHEN last_audit_date IS NOT NULL THEN last_audit_date + (audit_frequency_months * INTERVAL '1 month')
+            ELSE compliance_deadline
+        END
+    ) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.regulatory_requirements IS 'Tracks all regulatory requirements related to business continuity and disaster recovery';
+COMMENT ON COLUMN cmbc.regulatory_requirements.applicable_departments IS 'Array of departments affected by this regulation';
+
+
+--crisis team readiness view
+CREATE OR REPLACE VIEW cmbc.vw_crisis_team_readiness AS
+SELECT
+    cmt.member_id,
+    cmt.name,
+    cmt.role,
+    cmt.department,
+    cmt.is_primary,
+    bm.name AS backup_member_name,
+    cmt.training_completion_date,
+    CASE
+        WHEN cmt.training_completion_date IS NULL THEN 'No Training'
+        WHEN cmt.training_completion_date > CURRENT_DATE - INTERVAL '1 year' THEN 'Current'
+        ELSE 'Outdated'
+    END AS training_status,
+    COUNT(DISTINCT tr.record_id) AS training_count,
+    COUNT(DISTINCT i.incident_id) AS incident_participation_count
+FROM
+    cmbc.crisis_management_team cmt
+LEFT JOIN
+    cmbc.crisis_management_team bm ON cmt.backup_member_id = bm.member_id
+LEFT JOIN
+    cmbc.training_records tr ON cmt.employee_id = tr.employee_id
+LEFT JOIN
+    cmbc.recovery_actions ra ON cmt.member_id = ra.assigned_to::INTEGER
+LEFT JOIN
+    cmbc.incidents i ON ra.incident_id = i.incident_id
+GROUP BY
+    cmt.member_id, cmt.name, cmt.role, cmt.department, cmt.is_primary,
+    bm.name, cmt.training_completion_date;
+
+COMMENT ON VIEW cmbc.vw_crisis_team_readiness IS 'Provides a readiness assessment of crisis management team members including training status and experience';
+
+
+--supply chain risk exposure view
+CREATE OR REPLACE VIEW cmbc.vw_supply_chain_risk AS
+SELECT
+    scd.dependency_id,
+    scd.item_name,
+    scd.category,
+    scd.criticality,
+    v.vendor_name AS primary_vendor,
+    v2.vendor_name AS secondary_vendor,
+    scd.lead_time_days,
+    scd.max_tolerable_disruption_days,
+    v.overall_risk_score AS primary_vendor_risk_score,
+    v2.overall_risk_score AS secondary_vendor_risk_score,
+    CASE
+        WHEN v.overall_risk_score IS NULL OR v.overall_risk_score >= 3.5 THEN 'High Risk'
+        WHEN scd.secondary_vendor_id IS NULL THEN 'Single Source Risk'
+        WHEN scd.max_tolerable_disruption_days > scd.lead_time_days THEN 'Adequate Buffer'
+        ELSE 'Potential Disruption Risk'
+    END AS risk_assessment
+FROM
+    cmbc.supply_chain_dependencies scd
+LEFT JOIN
+    cmbc.vendors v ON scd.primary_vendor_id = v.vendor_id
+LEFT JOIN
+    cmbc.vendors v2 ON scd.secondary_vendor_id = v2.vendor_id
+LEFT JOIN
+    (SELECT vendor_id, MAX(assessment_date) AS latest_date
+     FROM cmbc.vendor_risk_assessments GROUP BY vendor_id) lv ON v.vendor_id = lv.vendor_id
+LEFT JOIN
+    cmbc.vendor_risk_assessments vra ON lv.vendor_id = vra.vendor_id AND lv.latest_date = vra.assessment_date
+LEFT JOIN
+    (SELECT vendor_id, MAX(assessment_date) AS latest_date2
+     FROM cmbc.vendor_risk_assessments GROUP BY vendor_id) lv2 ON v2.vendor_id = lv2.vendor_id
+LEFT JOIN
+    cmbc.vendor_risk_assessments vra2 ON lv2.vendor_id = vra2.vendor_id AND lv2.latest_date2 = vra2.assessment_date;
+
+COMMENT ON VIEW cmbc.vw_supply_chain_risk IS 'Assesses supply chain risks by evaluating vendor reliability and disruption tolerance';
+
+--regulatory compliance dashboard view
+CREATE OR REPLACE VIEW cmbc.vw_regulatory_compliance AS
+SELECT
+    rr.requirement_id,
+    rr.regulation_name,
+    rr.jurisdiction,
+    rr.compliance_status,
+    rr.responsible_party,
+    rr.compliance_deadline,
+    rr.next_audit_date,
+    COUNT(DISTINCT d.department) AS departments_affected,
+    STRING_AGG(DISTINCT d.department, ', ') AS department_list,
+    CASE
+        WHEN rr.compliance_status = 'Non-Compliant' AND rr.compliance_deadline < CURRENT_DATE THEN 'Critical'
+        WHEN rr.compliance_status != 'Compliant' AND rr.compliance_deadline < CURRENT_DATE + INTERVAL '1 month' THEN 'High'
+        WHEN rr.compliance_status = 'Compliant' THEN 'Compliant'
+        ELSE 'Medium'
+    END AS priority_status
+FROM
+    cmbc.regulatory_requirements rr,
+    UNNEST(rr.applicable_departments) AS d(department)
+GROUP BY
+    rr.requirement_id, rr.regulation_name, rr.jurisdiction, rr.compliance_status,
+    rr.responsible_party, rr.compliance_deadline, rr.next_audit_date;
+
+COMMENT ON VIEW cmbc.vw_regulatory_compliance IS 'Provides a compliance dashboard showing status of all regulatory requirements with priority assessment';
+
+--backup system readiness
+CREATE MATERIALIZED VIEW cmbc.mv_backup_system_readiness AS
+SELECT
+    bs.system_id,
+    bs.system_name,
+    bs.system_type,
+    ps.system_name AS primary_system_name,
+    bs.recovery_time_minutes,
+    bs.recovery_point_minutes,
+    bs.last_test_date,
+    bs.test_status,
+    CASE
+        WHEN bs.last_test_date IS NULL THEN 'Not Tested'
+        WHEN bs.last_test_date < CURRENT_DATE - INTERVAL '6 months' THEN 'Testing Stale'
+        WHEN bs.test_status != 'Success' THEN 'Needs Attention'
+        ELSE 'Operational'
+    END AS readiness_status,
+    EXTRACT(DAY FROM CURRENT_DATE - bs.last_test_date) AS days_since_last_test
+FROM
+    cmbc.backup_systems bs
+LEFT JOIN
+    cmbc.backup_systems ps ON bs.primary_system_id = ps.system_id
+WHERE
+    bs.is_active = TRUE;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_backup_system_readiness IS 'Assesses the readiness of backup systems based on testing history and recovery capabilities';
+
+-- work location coverage
+CREATE MATERIALIZED VIEW cmbc.mv_work_location_coverage AS
+SELECT
+    d.department,
+    COUNT(DISTINCT CASE WHEN awl.is_active THEN awl.location_id END) AS available_locations,
+    MIN(awl.capacity) AS min_location_capacity,
+    MAX(awl.capacity) AS max_location_capacity,
+    STRING_AGG(DISTINCT awl.location_name, ', ') AS location_names,
+    CASE
+        WHEN COUNT(DISTINCT CASE WHEN awl.is_active THEN awl.location_id END) = 0 THEN 'No Coverage'
+        WHEN COUNT(DISTINCT CASE WHEN awl.is_active THEN awl.location_id END) > 1 THEN 'Redundant Coverage'
+        ELSE 'Single Location'
+    END AS coverage_status
+FROM
+    (SELECT DISTINCT department FROM cmbc.critical_business_processes) d
+LEFT JOIN
+    cmbc.alternative_work_locations awl ON d.department = ANY(awl.department_coverage)
+GROUP BY
+    d.department;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_work_location_coverage IS 'Analyzes alternative work location coverage by department for business continuity planning';
+
+
+--advanced crisis management team
+CREATE OR REPLACE PROCEDURE cmbc.sp_activate_crisis_team(
+    p_incident_id INTEGER,
+    p_activation_reason TEXT,
+    OUT p_team_activation_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_incident_severity VARCHAR(20);
+BEGIN
+    -- Get incident severity
+    SELECT severity INTO v_incident_severity
+    FROM cmbc.incidents
+    WHERE incident_id = p_incident_id;
+
+    -- Create team activation record
+    INSERT INTO cmbc.crisis_team_activations (
+        incident_id,
+        activation_time,
+        activation_reason,
+        status,
+        severity_level
+    ) VALUES (
+        p_incident_id,
+        CURRENT_TIMESTAMP,
+        p_activation_reason,
+        'Active',
+        v_incident_severity
+    ) RETURNING activation_id INTO p_team_activation_id;
+
+    -- Notify all primary team members
+    INSERT INTO cmbc.notifications (
+        recipient_id,
+        message,
+        notification_type,
+        related_incident_id,
+        status
+    )
+    SELECT
+        member_id,
+        'Crisis Team Activation: ' || p_activation_reason,
+        'Crisis Activation',
+        p_incident_id,
+        'Pending'
+    FROM
+        cmbc.crisis_management_team
+    WHERE
+        is_primary = TRUE;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_activate_crisis_team IS 'Activates the crisis management team for a specific incident, creates activation record, and notifies team members';
+
+--plan backup system test
+CREATE OR REPLACE PROCEDURE cmbc.sp_plan_backup_test(
+    p_system_id INTEGER,
+    p_test_type VARCHAR(50),
+    p_scheduled_date TIMESTAMP WITH TIME ZONE,
+    p_test_scenario TEXT,
+    p_coordinator VARCHAR(100),
+    OUT p_test_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Insert backup system test record
+    INSERT INTO cmbc.backup_system_tests (
+        system_id,
+        test_type,
+        scheduled_date,
+        test_scenario,
+        coordinator,
+        status
+    ) VALUES (
+        p_system_id,
+        p_test_type,
+        p_scheduled_date,
+        p_test_scenario,
+        p_coordinator,
+        'Scheduled'
+    ) RETURNING test_id INTO p_test_id;
+
+    -- Update backup system last_test_date if this is an ad-hoc test
+    IF p_test_type = 'Ad-hoc' THEN
+        UPDATE cmbc.backup_systems
+        SET
+            last_test_date = p_scheduled_date::DATE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            system_id = p_system_id;
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_plan_backup_test IS 'Schedules a test for a backup system and updates system records accordingly';
+
+--update regulatory compliance status
+CREATE OR REPLACE PROCEDURE cmbc.sp_update_regulatory_compliance(
+    p_requirement_id INTEGER,
+    p_new_status VARCHAR(50),
+    p_completion_date DATE DEFAULT NULL,
+    p_evidence TEXT DEFAULT NULL,
+    p_updated_by VARCHAR(100)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Update compliance status
+    UPDATE cmbc.regulatory_requirements
+    SET
+        compliance_status = p_new_status,
+        last_audit_date = CASE WHEN p_new_status = 'Compliant' THEN COALESCE(p_completion_date, CURRENT_DATE) ELSE last_audit_date END,
+        documentation_reference = COALESCE(p_evidence, documentation_reference),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE
+        requirement_id = p_requirement_id;
+
+    -- Log the compliance update
+    INSERT INTO cmbc.regulatory_compliance_log (
+        requirement_id,
+        old_status,
+        new_status,
+        changed_by,
+        change_reason,
+        evidence
+    )
+    SELECT
+        p_requirement_id,
+        compliance_status,
+        p_new_status,
+        p_updated_by,
+        'Status Update',
+        p_evidence
+    FROM
+        cmbc.regulatory_requirements
+    WHERE
+        requirement_id = p_requirement_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_update_regulatory_compliance IS 'Updates the compliance status of a regulatory requirement and maintains an audit log of changes';
+
+
+-- assess suply chain risk
+CREATE OR REPLACE PROCEDURE cmbc.sp_assess_supply_chain_risk(
+    p_dependency_id INTEGER,
+    p_assessment_date DATE,
+    p_assessor VARCHAR(100),
+    p_risk_level VARCHAR(20),
+    p_risk_factors TEXT,
+    p_mitigation_plan TEXT,
+    OUT p_assessment_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_criticality VARCHAR(20);
+BEGIN
+    -- Get current criticality
+    SELECT criticality INTO v_criticality
+    FROM cmbc.supply_chain_dependencies
+    WHERE dependency_id = p_dependency_id;
+
+    -- Insert new assessment
+    INSERT INTO cmbc.supply_chain_risk_assessments (
+        dependency_id,
+        assessment_date,
+        assessor,
+        current_criticality,
+        risk_level,
+        risk_factors,
+        mitigation_plan
+    ) VALUES (
+        p_dependency_id,
+        p_assessment_date,
+        p_assessor,
+        v_criticality,
+        p_risk_level,
+        p_risk_factors,
+        p_mitigation_plan
+    ) RETURNING assessment_id INTO p_assessment_id;
+
+    -- Update dependency criticality if risk level is higher
+    IF (p_risk_level = 'High' AND v_criticality IN ('Low', 'Medium')) OR
+       (p_risk_level = 'Critical' AND v_criticality != 'Critical') THEN
+        UPDATE cmbc.supply_chain_dependencies
+        SET
+            criticality = CASE
+                            WHEN p_risk_level = 'High' THEN 'High'
+                            ELSE 'Critical'
+                          END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            dependency_id = p_dependency_id;
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_assess_supply_chain_risk IS 'Performs a risk assessment on a supply chain dependency and updates criticality if needed';
+
+-- generate BCP test report
+CREATE OR REPLACE PROCEDURE cmbc.sp_generate_bcp_test_report(
+    p_test_id INTEGER,
+    p_report_format VARCHAR(20) DEFAULT 'PDF',
+    OUT p_report_path TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_bcp_id INTEGER;
+    v_test_name VARCHAR(255);
+    v_test_date DATE;
+    v_success_rate NUMERIC(5,2);
+    v_finding_count INTEGER;
+    v_critical_findings INTEGER;
+BEGIN
+    -- Get test information
+    SELECT
+        bcp_id, test_name, test_date, success_rate_pct
+    INTO
+        v_bcp_id, v_test_name, v_test_date, v_success_rate
+    FROM
+        cmbc.bcp_tests
+    WHERE
+        test_id = p_test_id;
+
+    -- Get finding statistics
+    SELECT
+        COUNT(*),
+        SUM(CASE WHEN severity = 'Critical' THEN 1 ELSE 0 END)
+    INTO
+        v_finding_count, v_critical_findings
+    FROM
+        cmbc.test_findings
+    WHERE
+        test_id = p_test_id;
+
+    -- Generate report path (in a real implementation, this would generate an actual file)
+    p_report_path := '/reports/bcp_tests/' || v_bcp_id || '/' || p_test_id || '_' || REPLACE(LOWER(v_test_name), ' ', '_') || '.' || LOWER(p_report_format);
+
+    -- Insert report record
+    INSERT INTO cmbc.bcp_test_reports (
+        test_id,
+        report_path,
+        generated_at,
+        success_rate,
+        total_findings,
+        critical_findings
+    ) VALUES (
+        p_test_id,
+        p_report_path,
+        CURRENT_TIMESTAMP,
+        v_success_rate,
+        v_finding_count,
+        v_critical_findings
+    );
+
+    -- Update test record
+    UPDATE cmbc.bcp_tests
+    SET
+        last_report_date = CURRENT_DATE,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE
+        test_id = p_test_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_generate_bcp_test_report IS 'Generates a test report for a BCP exercise and updates related records';
+
+-- notification systems tables
+CREATE TABLE cmbc.notifications (
+    notification_id SERIAL PRIMARY KEY,
+    recipient_id INTEGER NOT NULL, -- Could be user_id, team_id, etc.
+    message TEXT NOT NULL,
+    notification_type VARCHAR(50) NOT NULL CHECK (notification_type IN ('Alert', 'Reminder', 'Approval', 'Crisis Activation')),
+    related_incident_id INTEGER REFERENCES cmbc.incidents(incident_id),
+    related_test_id INTEGER REFERENCES cmbc.bcp_tests(test_id),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Pending', 'Sent', 'Delivered', 'Read', 'Failed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    read_at TIMESTAMP WITH TIME ZONE
+);
+
+COMMENT ON TABLE cmbc.notifications IS 'Tracks all system notifications sent to users for incidents, tests, and other events';
+
+CREATE TABLE cmbc.notification_templates (
+    template_id SERIAL PRIMARY KEY,
+    template_name VARCHAR(100) NOT NULL,
+    notification_type VARCHAR(50) NOT NULL,
+    subject TEXT NOT NULL,
+    body_template TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.notification_templates IS 'Stores templates for various notification types to ensure consistent messaging';
+
+--audti logging tables
+CREATE TABLE cmbc.audit_logs (
+    log_id SERIAL PRIMARY KEY,
+    table_name VARCHAR(100) NOT NULL,
+    record_id INTEGER NOT NULL,
+    action VARCHAR(20) NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+    action_by VARCHAR(100) NOT NULL,
+    action_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    old_values JSONB,
+    new_values JSONB
+);
+
+COMMENT ON TABLE cmbc.audit_logs IS 'Comprehensive audit log for all critical data changes in the CMBC system';
+
+CREATE TABLE cmbc.regulatory_compliance_log (
+    log_id SERIAL PRIMARY KEY,
+    requirement_id INTEGER NOT NULL REFERENCES cmbc.regulatory_requirements(requirement_id),
+    old_status VARCHAR(50),
+    new_status VARCHAR(50) NOT NULL,
+    changed_by VARCHAR(100) NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    change_reason TEXT,
+    evidence TEXT
+);
+
+COMMENT ON TABLE cmbc.regulatory_compliance_log IS 'Specialized audit log for tracking changes to regulatory compliance status';
+
+--geographic risk mapping tables
+CREATE TABLE cmbc.geographic_risks (
+    risk_id SERIAL PRIMARY KEY,
+    location_name VARCHAR(255) NOT NULL,
+    geo_coordinates POINT NOT NULL,
+    risk_type VARCHAR(100) NOT NULL CHECK (risk_type IN ('Earthquake', 'Flood', 'Hurricane', 'Political', 'Other')),
+    risk_level VARCHAR(20) NOT NULL CHECK (risk_level IN ('Low', 'Medium', 'High', 'Critical')),
+    last_occurrence DATE,
+    probability VARCHAR(20),
+    affected_facilities TEXT[],
+    mitigation_measures TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.geographic_risks IS 'Tracks geographic-specific risks that could impact business operations';
+
+CREATE TABLE cmbc.facility_risk_mapping (
+    mapping_id SERIAL PRIMARY KEY,
+    facility_id INTEGER NOT NULL, -- Would reference a facilities table
+    facility_name VARCHAR(255) NOT NULL,
+    geographic_risk_id INTEGER REFERENCES cmbc.geographic_risks(risk_id),
+    risk_exposure VARCHAR(20) NOT NULL CHECK (risk_exposure IN ('None', 'Low', 'Medium', 'High', 'Critical')),
+    contingency_plan TEXT,
+    last_review_date DATE,
+    next_review_date DATE GENERATED ALWAYS AS (last_review_date + INTERVAL '1 year') STORED
+);
+
+COMMENT ON TABLE cmbc.facility_risk_mapping IS 'Maps organizational facilities to geographic risks and tracks mitigation plans';
+
+-- AI powered risk prediction tables
+CREATE TABLE cmbc.risk_prediction_models (
+    model_id SERIAL PRIMARY KEY,
+    model_name VARCHAR(255) NOT NULL,
+    model_version VARCHAR(50) NOT NULL,
+    model_type VARCHAR(100) NOT NULL CHECK (model_type IN ('Time Series', 'Classification', 'Anomaly Detection', 'Clustering')),
+    target_risk_category VARCHAR(100) NOT NULL,
+    training_data_range DATERANGE NOT NULL,
+    accuracy_metric NUMERIC(5,2),
+    last_trained_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    model_owner VARCHAR(100) NOT NULL,
+    model_metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.risk_prediction_models IS 'Stores metadata about AI/ML models used for predicting business continuity risks and their performance characteristics';
+COMMENT ON COLUMN cmbc.risk_prediction_models.model_metadata IS 'JSON containing model parameters, feature importance, and other technical details';
+
+CREATE TABLE cmbc.risk_predictions (
+    prediction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    model_id INTEGER NOT NULL REFERENCES cmbc.risk_prediction_models(model_id),
+    prediction_timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    prediction_window DATERANGE NOT NULL,
+    predicted_risk_type VARCHAR(100) NOT NULL,
+    predicted_risk_level VARCHAR(20) NOT NULL CHECK (predicted_risk_level IN ('Low', 'Medium', 'High', 'Critical')),
+    confidence_score NUMERIC(5,2) NOT NULL,
+    key_influencing_factors JSONB,
+    mitigation_recommendations TEXT[],
+    reviewed_by VARCHAR(100),
+    review_status VARCHAR(20) CHECK (review_status IN ('Pending', 'Accepted', 'Rejected', 'Actioned')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.risk_predictions IS 'Stores risk predictions generated by AI models including confidence scores and recommendations';
+COMMENT ON COLUMN cmbc.risk_predictions.key_influencing_factors IS 'JSON structure showing the top factors contributing to the risk prediction';
+
+
+-- automated workflow engine tables
+CREATE TABLE cmbc.workflow_templates (
+    template_id SERIAL PRIMARY KEY,
+    template_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    trigger_event VARCHAR(100) NOT NULL CHECK (trigger_event IN ('Incident Created', 'Risk Threshold Exceeded', 'Test Failure', 'Regulatory Change', 'Manual')),
+    applicable_risk_types VARCHAR(100)[],
+    priority INTEGER NOT NULL DEFAULT 3,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    version VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.workflow_templates IS 'Defines templates for automated workflows that execute in response to business continuity events';
+
+CREATE TABLE cmbc.workflow_steps (
+    step_id SERIAL PRIMARY KEY,
+    template_id INTEGER NOT NULL REFERENCES cmbc.workflow_templates(template_id),
+    step_order INTEGER NOT NULL,
+    step_type VARCHAR(50) NOT NULL CHECK (step_type IN ('Notification', 'Approval', 'Data Collection', 'System Action', 'Manual Task')),
+    step_name VARCHAR(255) NOT NULL,
+    instructions TEXT,
+    assigned_role VARCHAR(100),
+    timeout_minutes INTEGER,
+    is_parallel BOOLEAN NOT NULL DEFAULT FALSE,
+    completion_criteria TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.workflow_steps IS 'Defines the individual steps that comprise each automated workflow template';
+
+CREATE TABLE cmbc.active_workflows (
+    workflow_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id INTEGER NOT NULL REFERENCES cmbc.workflow_templates(template_id),
+    initiating_event_id INTEGER, -- Could reference incidents, tests, etc.
+    initiating_event_type VARCHAR(50) NOT NULL,
+    current_status VARCHAR(50) NOT NULL CHECK (current_status IN ('Pending', 'In Progress', 'Completed', 'Failed', 'Terminated')),
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    initiated_by VARCHAR(100),
+    timeout_at TIMESTAMP WITH TIME ZONE GENERATED ALWAYS AS (
+        started_at + (SELECT MAX(timeout_minutes) FROM cmbc.workflow_steps WHERE template_id = template_id) * INTERVAL '1 minute'
+    ) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.active_workflows IS 'Tracks currently executing workflow instances with their status and timing';
+
+CREATE TABLE cmbc.workflow_execution_log (
+    execution_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id UUID NOT NULL REFERENCES cmbc.active_workflows(workflow_id),
+    step_id INTEGER NOT NULL REFERENCES cmbc.workflow_steps(step_id),
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Pending', 'In Progress', 'Completed', 'Failed', 'Skipped')),
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    performed_by VARCHAR(100),
+    output_data JSONB,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.workflow_execution_log IS 'Detailed log of each step execution within active workflows for auditing and troubleshooting';
+
+--predictive risk exposure view
+CREATE OR REPLACE VIEW cmbc.vw_predictive_risk_exposure AS
+WITH latest_predictions AS (
+    SELECT
+        predicted_risk_type,
+        predicted_risk_level,
+        confidence_score,
+        ROW_NUMBER() OVER (PARTITION BY predicted_risk_type ORDER BY prediction_timestamp DESC) as rn
+    FROM
+        cmbc.risk_predictions
+    WHERE
+        prediction_window @> CURRENT_DATE
+        AND review_status IN ('Accepted', 'Actioned')
+)
+SELECT
+    r.risk_type AS current_risk_type,
+    COUNT(*) AS documented_risk_count,
+    MAX(r.risk_score) AS max_current_risk_score,
+    p.predicted_risk_level,
+    p.confidence_score,
+    CASE
+        WHEN p.predicted_risk_level = 'Critical' AND MAX(r.risk_score) >= 16 THEN 'Immediate Action Required'
+        WHEN p.predicted_risk_level IN ('High', 'Critical') THEN 'Enhanced Monitoring Needed'
+        WHEN p.predicted_risk_level = 'Medium' AND MAX(r.risk_score) >= 9 THEN 'Review Recommended'
+        ELSE 'Normal Operations'
+    END AS recommended_action
+FROM
+    cmbc.risk_assessments r
+LEFT JOIN
+    latest_predictions p ON r.category = p.predicted_risk_type AND p.rn = 1
+GROUP BY
+    r.risk_type, p.predicted_risk_level, p.confidence_score;
+
+COMMENT ON VIEW cmbc.vw_predictive_risk_exposure IS 'Combines current risk assessments with AI predictions to provide forward-looking risk exposure analysis';
+
+--workflow performance analytics view
+CREATE OR REPLACE VIEW cmbc.vw_workflow_performance AS
+SELECT
+    wt.template_id,
+    wt.template_name,
+    COUNT(DISTINCT aw.workflow_id) AS total_executions,
+    AVG(EXTRACT(EPOCH FROM (aw.completed_at - aw.started_at))/60 AS avg_duration_minutes,
+    SUM(CASE WHEN aw.current_status = 'Completed' THEN 1 ELSE 0 END) AS success_count,
+    SUM(CASE WHEN aw.current_status = 'Failed' THEN 1 ELSE 0 END) AS failure_count,
+    MAX(aw.started_at) AS last_executed,
+    COUNT(DISTINCT CASE WHEN aw.timeout_at < CURRENT_TIMESTAMP AND aw.current_status = 'In Progress' THEN aw.workflow_id END) AS timed_out_count
+FROM
+    cmbc.workflow_templates wt
+LEFT JOIN
+    cmbc.active_workflows aw ON wt.template_id = aw.template_id
+GROUP BY
+    wt.template_id, wt.template_name;
+
+COMMENT ON VIEW cmbc.vw_workflow_performance IS 'Provides analytics on workflow execution times, success rates, and timeouts for process improvement';
+
+--materialized views for advanced analytics
+-- risk prediction accuracy tracking
+CREATE MATERIALIZED VIEW cmbc.mv_prediction_accuracy AS
+WITH actual_incidents AS (
+    SELECT
+        incident_type,
+        COUNT(*) AS incident_count,
+        DATE_TRUNC('month', start_time) AS month
+    FROM
+        cmbc.incidents
+    WHERE
+        status = 'Closed'
+    GROUP BY
+        DATE_TRUNC('month', start_time), incident_type
+),
+predictions AS (
+    SELECT
+        predicted_risk_type,
+        predicted_risk_level,
+        COUNT(*) AS prediction_count,
+        DATE_TRUNC('month', prediction_timestamp) AS month
+    FROM
+        cmbc.risk_predictions
+    WHERE
+        prediction_window @> (DATE_TRUNC('month', prediction_timestamp) + INTERVAL '1 month')
+        AND review_status = 'Accepted'
+    GROUP BY
+        DATE_TRUNC('month', prediction_timestamp), predicted_risk_type, predicted_risk_level
+)
+SELECT
+    COALESCE(a.month, p.month) AS month,
+    COALESCE(a.incident_type, p.predicted_risk_type) AS risk_type,
+    a.incident_count,
+    p.prediction_count,
+    p.predicted_risk_level,
+    CASE
+        WHEN a.incident_count IS NULL THEN 'False Positive'
+        WHEN p.prediction_count IS NULL THEN 'Missed Prediction'
+        WHEN p.predicted_risk_level = 'High' AND a.incident_count > 0 THEN 'Accurate Prediction'
+        ELSE 'Needs Review'
+    END AS prediction_accuracy
+FROM
+    actual_incidents a
+FULL OUTER JOIN
+    predictions p ON a.month = p.month AND a.incident_type = p.predicted_risk_type;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_prediction_accuracy IS 'Tracks the accuracy of risk predictions by comparing predicted risks to actual incidents';
+
+
+--workflow step bottleneck analysis
+CREATE MATERIALIZED VIEW cmbc.mv_workflow_bottlenecks AS
+SELECT
+    ws.template_id,
+    wt.template_name,
+    ws.step_id,
+    ws.step_name,
+    ws.step_type,
+    COUNT(*) AS total_executions,
+    AVG(EXTRACT(EPOCH FROM (wel.completed_at - wel.started_at))) AS avg_duration_seconds,
+    MAX(EXTRACT(EPOCH FROM (wel.completed_at - wel.started_at))) AS max_duration_seconds,
+    SUM(CASE WHEN wel.status = 'Failed' THEN 1 ELSE 0 END) AS failure_count,
+    SUM(CASE WHEN wel.retry_count > 0 THEN 1 ELSE 0 END) AS retry_count,
+    STRING_AGG(DISTINCT wel.error_message, '|') FILTER (WHERE wel.error_message IS NOT NULL) AS common_errors
+FROM
+    cmbc.workflow_steps ws
+JOIN
+    cmbc.workflow_templates wt ON ws.template_id = wt.template_id
+JOIN
+    cmbc.workflow_execution_log wel ON ws.step_id = wel.step_id
+WHERE
+    wel.completed_at IS NOT NULL
+GROUP BY
+    ws.template_id, wt.template_name, ws.step_id, ws.step_name, ws.step_type;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_workflow_bottlenecks IS 'Identifies performance bottlenecks and common failure points in automated workflows';
+
+
+--ai risk prediction generation procedure
+CREATE OR REPLACE PROCEDURE cmbc.sp_generate_risk_predictions(
+    p_model_id INTEGER,
+    p_prediction_window_days INTEGER DEFAULT 30,
+    p_confidence_threshold NUMERIC(5,2) DEFAULT 0.7,
+    OUT p_prediction_count INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_model_type VARCHAR(100);
+    v_target_risk_category VARCHAR(100);
+BEGIN
+    -- Get model details
+    SELECT model_type, target_risk_category INTO v_model_type, v_target_risk_category
+    FROM cmbc.risk_prediction_models WHERE model_id = p_model_id;
+
+    -- In a real implementation, this would call an ML service or run a database ML function
+    -- This is a simplified simulation of the prediction process
+
+    -- Simulate generating predictions for different risk types
+    INSERT INTO cmbc.risk_predictions (
+        model_id,
+        prediction_timestamp,
+        prediction_window,
+        predicted_risk_type,
+        predicted_risk_level,
+        confidence_score,
+        key_influencing_factors,
+        mitigation_recommendations,
+        review_status
+    )
+    SELECT
+        p_model_id,
+        CURRENT_TIMESTAMP,
+        DATERANGE(CURRENT_DATE, CURRENT_DATE + p_prediction_window_days),
+        risk_type,
+        CASE
+            WHEN random() < 0.1 THEN 'Critical'
+            WHEN random() < 0.3 THEN 'High'
+            WHEN random() < 0.6 THEN 'Medium'
+            ELSE 'Low'
+        END,
+        random()::NUMERIC(5,2) + 0.5, -- Simulated confidence score between 0.5-1.5
+        jsonb_build_object(
+            'top_factor', CASE WHEN random() < 0.5 THEN 'Historical Frequency' ELSE 'External Indicators' END,
+            'trend', CASE WHEN random() < 0.5 THEN 'Increasing' ELSE 'Stable' END
+        ),
+        ARRAY[
+            CASE
+                WHEN random() < 0.3 THEN 'Review contingency plans'
+                WHEN random() < 0.6 THEN 'Increase monitoring'
+                ELSE 'Conduct stress test'
+            END
+        ],
+        'Pending'
+    FROM
+        (SELECT DISTINCT category AS risk_type FROM cmbc.risk_assessments
+         WHERE v_target_risk_category = 'All' OR category = v_target_risk_category) t;
+
+    -- Get count of generated predictions
+    GET DIAGNOSTICS p_prediction_count = ROW_COUNT;
+
+    -- Update model last used timestamp
+    UPDATE cmbc.risk_prediction_models
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE model_id = p_model_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_generate_risk_predictions IS 'Simulates generating risk predictions using AI models (in production would integrate with actual ML services)';
+
+
+--automated workflow executione ngine
+
+CREATE OR REPLACE PROCEDURE cmbc.sp_execute_workflow_step(
+    p_workflow_id UUID,
+    p_step_id INTEGER,
+    p_triggered_by VARCHAR(100) DEFAULT 'system'
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_step_type VARCHAR(50);
+    v_instructions TEXT;
+    v_assigned_role VARCHAR(100);
+    v_template_id INTEGER;
+    v_step_order INTEGER;
+    v_is_parallel BOOLEAN;
+    v_next_step_id INTEGER;
+    v_workflow_status VARCHAR(50);
+    v_notification_id INTEGER;
+BEGIN
+    -- Get step details
+    SELECT
+        ws.step_type, ws.instructions, ws.assigned_role,
+        ws.template_id, ws.step_order, ws.is_parallel
+    INTO
+        v_step_type, v_instructions, v_assigned_role,
+        v_template_id, v_step_order, v_is_parallel
+    FROM
+        cmbc.workflow_steps ws
+    WHERE
+        ws.step_id = p_step_id;
+
+    -- Log step execution start
+    INSERT INTO cmbc.workflow_execution_log (
+        workflow_id,
+        step_id,
+        status,
+        started_at,
+        performed_by
+    ) VALUES (
+        p_workflow_id,
+        p_step_id,
+        'In Progress',
+        CURRENT_TIMESTAMP,
+        p_triggered_by
+    ) RETURNING execution_id INTO v_notification_id;
+
+    -- Execute step based on type
+    IF v_step_type = 'Notification' THEN
+        -- Create notification for assigned role
+        INSERT INTO cmbc.notifications (
+            recipient_id,
+            message,
+            notification_type,
+            related_workflow_id,
+            status
+        )
+        SELECT
+            member_id,
+            'Workflow Action Required: ' || v_instructions,
+            'Workflow Step',
+            p_workflow_id,
+            'Pending'
+        FROM
+            cmbc.crisis_management_team
+        WHERE
+            role = v_assigned_role;
+
+        -- Mark step as completed (notifications are fire-and-forget)
+        UPDATE cmbc.workflow_execution_log
+        SET
+            status = 'Completed',
+            completed_at = CURRENT_TIMESTAMP,
+            output_data = jsonb_build_object('notification_count', 1)
+        WHERE
+            execution_id = v_notification_id;
+
+    ELSIF v_step_type = 'System Action' THEN
+        -- In a real implementation, this would trigger an API call or database operation
+        -- Simulate system action with a delay
+        PERFORM pg_sleep(1);
+
+        -- Randomly fail 10% of system actions for demonstration
+        IF random() < 0.1 THEN
+            UPDATE cmbc.workflow_execution_log
+            SET
+                status = 'Failed',
+                completed_at = CURRENT_TIMESTAMP,
+                error_message = 'Simulated system action failure'
+            WHERE
+                execution_id = v_notification_id;
+        ELSE
+            UPDATE cmbc.workflow_execution_log
+            SET
+                status = 'Completed',
+                completed_at = CURRENT_TIMESTAMP,
+                output_data = jsonb_build_object('result', 'success')
+            WHERE
+                execution_id = v_notification_id;
+        END IF;
+    END IF;
+
+    -- Check if workflow is complete
+    SELECT status INTO v_workflow_status
+    FROM cmbc.active_workflows
+    WHERE workflow_id = p_workflow_id;
+
+    -- Get next step if current step completed successfully
+    IF v_workflow_status = 'In Progress' THEN
+        SELECT step_id INTO v_next_step_id
+        FROM cmbc.workflow_steps
+        WHERE template_id = v_template_id
+          AND step_order > v_step_order
+          AND is_parallel = FALSE
+        ORDER BY step_order
+        LIMIT 1;
+
+        IF v_next_step_id IS NOT NULL THEN
+            CALL cmbc.sp_execute_workflow_step(p_workflow_id, v_next_step_id, p_triggered_by);
+        ELSE
+            -- No more steps, mark workflow as completed
+            UPDATE cmbc.active_workflows
+            SET
+                current_status = 'Completed',
+                completed_at = CURRENT_TIMESTAMP
+            WHERE
+                workflow_id = p_workflow_id;
+        END IF;
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_execute_workflow_step IS 'Executes an individual workflow step and handles transitions to subsequent steps';
+
+
+--automated incident response workflow trigger
+CREATE OR REPLACE PROCEDURE cmbc.sp_trigger_incident_response(
+    p_incident_id INTEGER,
+    p_severity VARCHAR(20)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_template_id INTEGER;
+    v_workflow_id UUID;
+BEGIN
+    -- Determine appropriate workflow template based on incident severity
+    IF p_severity = 'Critical' THEN
+        SELECT template_id INTO v_template_id
+        FROM cmbc.workflow_templates
+        WHERE template_name = 'Critical Incident Response'
+        LIMIT 1;
+    ELSIF p_severity = 'High' THEN
+        SELECT template_id INTO v_template_id
+        FROM cmbc.workflow_templates
+        WHERE template_name = 'High Severity Incident Response'
+        LIMIT 1;
+    ELSE
+        SELECT template_id INTO v_template_id
+        FROM cmbc.workflow_templates
+        WHERE template_name = 'Standard Incident Response'
+        LIMIT 1;
+    END IF;
+
+    -- Create workflow instance
+    INSERT INTO cmbc.active_workflows (
+        template_id,
+        initiating_event_id,
+        initiating_event_type,
+        current_status,
+        started_at,
+        initiated_by
+    ) VALUES (
+        v_template_id,
+        p_incident_id,
+        'Incident',
+        'In Progress',
+        CURRENT_TIMESTAMP,
+        'system'
+    ) RETURNING workflow_id INTO v_workflow_id;
+
+    -- Start workflow execution with first step
+    PERFORM cmbc.sp_execute_workflow_step(
+        v_workflow_id,
+        (SELECT step_id FROM cmbc.workflow_steps
+         WHERE template_id = v_template_id
+         ORDER BY step_order LIMIT 1),
+        'system'
+    );
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_trigger_incident_response IS 'Automatically triggers the appropriate response workflow based on incident severity';
+
+
+-- real-time monitoring integrationt ables
+CREATE TABLE cmbc.monitoring_sensors (
+    sensor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sensor_name VARCHAR(255) NOT NULL,
+    sensor_type VARCHAR(100) NOT NULL CHECK (sensor_type IN ('Network', 'Server', 'Facility', 'Environmental', 'Application')),
+    location VARCHAR(255),
+    monitoring_metric VARCHAR(100) NOT NULL,
+    normal_range NUMERIC[],
+    critical_threshold NUMERIC,
+    update_frequency_seconds INTEGER NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_reading_time TIMESTAMP WITH TIME ZONE,
+    last_reading_value NUMERIC,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.monitoring_sensors IS 'Defines sensors and monitoring points for real-time operational monitoring';
+
+CREATE TABLE cmbc.sensor_alert_rules (
+    rule_id SERIAL PRIMARY KEY,
+    sensor_type VARCHAR(100) NOT NULL,
+    condition_expression TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Warning', 'Critical', 'Emergency')),
+    notification_template_id INTEGER REFERENCES cmbc.notification_templates(template_id),
+    auto_trigger_workflow_id INTEGER REFERENCES cmbc.workflow_templates(template_id),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.sensor_alert_rules IS 'Defines rules for generating alerts from sensor data and automatic response actions';
+
+--blockchain based audit treail trables
+CREATE TABLE cmbc.immutable_audit_log (
+    log_id SERIAL PRIMARY KEY,
+    transaction_hash VARCHAR(64) NOT NULL,
+    table_name VARCHAR(100) NOT NULL,
+    record_id INTEGER NOT NULL,
+    action VARCHAR(20) NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+    action_by VARCHAR(100) NOT NULL,
+    action_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    data_hash VARCHAR(64) NOT NULL,
+    blockchain_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+    confirmation_timestamp TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (transaction_hash)
+);
+
+COMMENT ON TABLE cmbc.immutable_audit_log IS 'Stores cryptographically hashed audit records that can be verified against blockchain storage';
+
+CREATE TABLE cmbc.blockchain_verification (
+    verification_id SERIAL PRIMARY KEY,
+    log_id INTEGER NOT NULL REFERENCES cmbc.immutable_audit_log(log_id),
+    verification_method VARCHAR(50) NOT NULL CHECK (verification_method IN ('Ethereum', 'Hyperledger', 'Quorum')),
+    contract_address VARCHAR(42),
+    block_number INTEGER,
+    verification_timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.blockchain_verification IS 'Tracks blockchain verification details for immutable audit records';
+
+
+--predictive employee location safety
+CREATE TABLE cmbc.employee_safety_zones (
+    zone_id SERIAL PRIMARY KEY,
+    zone_name VARCHAR(255) NOT NULL,
+    geo_boundary GEOGRAPHY(POLYGON, 4326) NOT NULL,
+    risk_category VARCHAR(100) NOT NULL CHECK (risk_category IN ('Safe', 'Caution', 'High Risk', 'Restricted')),
+    risk_factors JSONB COMMENT 'JSON structure detailing risk factors like crime rates, environmental hazards',
+    daytime_risk_adjustment NUMERIC(3,2) DEFAULT 1.0,
+    nighttime_risk_adjustment NUMERIC(3,2) DEFAULT 1.5,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.employee_safety_zones IS 'Defines geographic zones with safety ratings used to assess employee risk during disruptions';
+
+CREATE TABLE cmbc.employee_location_risk (
+    risk_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id VARCHAR(50) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    location GEOGRAPHY(POINT, 4326) NOT NULL,
+    calculated_risk_score NUMERIC(5,2) NOT NULL,
+    risk_zone_id INTEGER REFERENCES cmbc.employee_safety_zones(zone_id),
+    time_of_day VARCHAR(10) GENERATED ALWAYS AS (
+        CASE
+            WHEN EXTRACT(HOUR FROM timestamp) BETWEEN 6 AND 18 THEN 'Day'
+            ELSE 'Night'
+        END
+    ) STORED,
+    recommended_action VARCHAR(255),
+    notification_sent BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.employee_location_risk IS 'Tracks real-time location-based risk assessments for employees during crises';
+
+
+---employee risk exposure trends
+CREATE MATERIALIZED VIEW cmbc.mv_employee_risk_trends AS
+SELECT
+    DATE_TRUNC('day', timestamp) AS day,
+    risk_zone_id,
+    ez.zone_name,
+    time_of_day,
+    COUNT(DISTINCT employee_id) AS employees_at_risk,
+    AVG(calculated_risk_score) AS avg_risk_score,
+    MAX(calculated_risk_score) AS max_risk_score,
+    COUNT(DISTINCT CASE WHEN calculated_risk_score > 70 THEN employee_id END) AS high_risk_employees,
+    STRING_AGG(DISTINCT recommended_action, '|') AS common_actions
+FROM
+    cmbc.employee_location_risk elr
+LEFT JOIN
+    cmbc.employee_safety_zones ez ON elr.risk_zone_id = ez.zone_id
+WHERE
+    timestamp > CURRENT_DATE - INTERVAL '30 days'
+GROUP BY
+    DATE_TRUNC('day', timestamp), risk_zone_id, ez.zone_name, time_of_day;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_employee_risk_trends IS 'Aggregates daily employee risk exposure data for trend analysis and safety planning';
+
+
+--satellite imagery integration for site risk analysis
+CREATE TABLE cmbc.satellite_risk_monitoring (
+    monitor_id SERIAL PRIMARY KEY,
+    facility_id INTEGER NOT NULL,
+    image_date DATE NOT NULL,
+    image_resolution_meters NUMERIC(5,2) NOT NULL,
+    risk_indicators JSONB NOT NULL COMMENT 'Flood levels, vegetation encroachment, security vulnerabilities',
+    change_from_previous NUMERIC(5,2) COMMENT 'Percentage change in risk indicators',
+    analyst_notes TEXT,
+    automated_alert_generated BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.satellite_risk_monitoring IS 'Stores analyzed satellite imagery data for detecting environmental risks to facilities';
+
+--neural network based incident pattern recognition
+CREATE TABLE cmbc.incident_patterns (
+    pattern_id SERIAL PRIMARY KEY,
+    model_version VARCHAR(50) NOT NULL,
+    pattern_type VARCHAR(100) NOT NULL CHECK (pattern_type IN ('Temporal', 'Geospatial', 'Systemic', 'Behavioral')),
+    pattern_expression JSONB NOT NULL COMMENT 'Mathematical representation of the pattern',
+    confidence_score NUMERIC(5,2) NOT NULL,
+    first_detected_date DATE NOT NULL,
+    last_observed_date DATE NOT NULL,
+    predicted_future_occurrences JSONB COMMENT 'Dates/locations of predicted recurrences',
+    recommended_preventative_actions TEXT[],
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.incident_patterns IS 'Stores complex incident patterns identified by AI models to enable proactive disruption prevention';
+
+
+-- predictive capacity planning
+CREATE TABLE cmbc.capacity_simulations (
+    simulation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scenario_name VARCHAR(255) NOT NULL,
+    simulation_parameters JSONB NOT NULL COMMENT 'Workload, resource constraints, etc.',
+    predicted_bottlenecks JSONB NOT NULL,
+    recommended_actions TEXT[] NOT NULL,
+    confidence_score NUMERIC(5,2) NOT NULL CHECK (confidence_score BETWEEN 0 AND 1),
+    run_by VARCHAR(100) NOT NULL,
+    run_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.capacity_simulations IS 'Stores results of predictive simulations for resource capacity during crises';
+
+--AI powered threat intelligence integration
+CREATE TABLE cmbc.threat_intelligence_feeds (
+    feed_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    feed_name VARCHAR(255) NOT NULL,
+    feed_type VARCHAR(50) NOT NULL CHECK (feed_type IN ('Cyber', 'GeoPolitical', 'SupplyChain', 'Health', 'Environmental')),
+    source_name VARCHAR(255) NOT NULL,
+    update_frequency_minutes INTEGER NOT NULL,
+    last_update TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    confidence_score NUMERIC(3,2) CHECK (confidence_score BETWEEN 0 AND 1),
+    coverage_scope VARCHAR(100)[],
+    authentication_details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.threat_intelligence_feeds IS 'Tracks external threat intelligence sources that provide real-time risk data to the organization';
+
+CREATE TABLE cmbc.threat_indicators (
+    indicator_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    feed_id UUID REFERENCES cmbc.threat_intelligence_feeds(feed_id),
+    indicator_type VARCHAR(50) NOT NULL CHECK (indicator_type IN ('IP', 'Domain', 'Hash', 'Pattern', 'Behavior')),
+    indicator_value TEXT NOT NULL,
+    first_seen TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_seen TIMESTAMP WITH TIME ZONE NOT NULL,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Low', 'Medium', 'High', 'Critical')),
+    confidence NUMERIC(3,2) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+    related_incidents UUID[],
+    recommended_actions TEXT[],
+    expiry_time TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN GENERATED ALWAYS AS (expiry_time > CURRENT_TIMESTAMP) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.threat_indicators IS 'Stores specific threat indicators from intelligence feeds with contextual metadata';
+
+-- blockchain based audit trails
+CREATE TABLE cmbc.blockchain_audit (
+    audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_hash VARCHAR(66) NOT NULL,
+    block_number BIGINT NOT NULL,
+    event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('Configuration', 'Access', 'Incident', 'Recovery', 'Decision')),
+    event_details JSONB NOT NULL,
+    actor_id VARCHAR(100) NOT NULL,
+    actor_role VARCHAR(50) NOT NULL,
+    network VARCHAR(50) NOT NULL CHECK (network IN ('Ethereum', 'Hyperledger', 'Quorum')),
+    smart_contract_address VARCHAR(42),
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_timestamp TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (transaction_hash)
+);
+
+COMMENT ON TABLE cmbc.blockchain_audit IS 'Immutable record of critical CMBC actions stored on blockchain for non-repudiation';
+
+CREATE TABLE cmbc.audit_verification (
+    verification_id SERIAL PRIMARY KEY,
+    audit_id UUID NOT NULL REFERENCES cmbc.blockchain_audit(audit_id),
+    verification_method VARCHAR(50) NOT NULL CHECK (verification_method IN ('OnChain', 'SmartContract', 'ThirdParty')),
+    verification_result JSONB NOT NULL,
+    verified_by VARCHAR(100) NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.audit_verification IS 'Tracks verification of blockchain audit records for compliance purposes';
+
+
+--IoT Sensor Integration for Physical Risk Monitoring
+CREATE TABLE cmbc.iot_sensors (
+    sensor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sensor_name VARCHAR(255) NOT NULL,
+    sensor_type VARCHAR(50) NOT NULL CHECK (sensor_type IN ('Temperature', 'Humidity', 'Motion', 'AirQuality', 'Water', 'Power')),
+    location_id INTEGER NOT NULL,
+    asset_id INTEGER,
+    normal_range NUMERIC[] NOT NULL,
+    critical_threshold NUMERIC NOT NULL,
+    update_frequency_seconds INTEGER NOT NULL,
+    last_reading TIMESTAMP WITH TIME ZONE,
+    last_value NUMERIC,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Active', 'Calibrating', 'Maintenance', 'Retired')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.iot_sensors IS 'Registry of IoT sensors monitoring physical environments for potential disruptions';
+
+CREATE TABLE cmbc.iot_alert_rules (
+    rule_id SERIAL PRIMARY KEY,
+    sensor_type VARCHAR(50) NOT NULL,
+    condition_expression TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Warning', 'Severe', 'Critical')),
+    notification_template_id INTEGER,
+    auto_trigger_workflow_id INTEGER,
+    cooldown_minutes INTEGER NOT NULL DEFAULT 5,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.iot_alert_rules IS 'Defines rules for generating alerts from IoT sensor data thresholds';
+
+
+-- Threat Intelligence Dashboard
+CREATE OR REPLACE VIEW cmbc.vw_threat_intelligence_dashboard AS
+SELECT
+    ti.feed_id,
+    tf.feed_name,
+    tf.feed_type,
+    COUNT(ti.indicator_id) AS indicator_count,
+    SUM(CASE WHEN ti.severity = 'Critical' THEN 1 ELSE 0 END) AS critical_indicators,
+    SUM(CASE WHEN ti.severity = 'High' THEN 1 ELSE 0 END) AS high_indicators,
+    MAX(ti.last_seen) AS latest_indicator,
+    AVG(ti.confidence) AS avg_confidence,
+    COUNT(DISTINCT ti.indicator_type) AS indicator_types,
+    ARRAY_AGG(DISTINCT i.incident_name) FILTER (WHERE i.incident_name IS NOT NULL) AS linked_incidents
+FROM
+    cmbc.threat_indicators ti
+JOIN
+    cmbc.threat_intelligence_feeds tf ON ti.feed_id = tf.feed_id
+LEFT JOIN
+    cmbc.incidents i ON i.incident_id = ANY(ti.related_incidents)
+WHERE
+    ti.is_active = TRUE
+    AND tf.is_active = TRUE
+GROUP BY
+    ti.feed_id, tf.feed_name, tf.feed_type;
+
+COMMENT ON VIEW cmbc.vw_threat_intelligence_dashboard IS 'Aggregates threat intelligence data for security operations center dashboards';
+
+--Blockchain Audit Trail Verificaiton
+CREATE OR REPLACE VIEW cmbc.vw_blockchain_verification_status AS
+SELECT
+    ba.event_type,
+    COUNT(*) AS total_events,
+    SUM(CASE WHEN ba.verified = TRUE THEN 1 ELSE 0 END) AS verified_events,
+    SUM(CASE WHEN ba.verified = FALSE THEN 1 ELSE 0 END) AS unverified_events,
+    MIN(ba.timestamp) AS earliest_event,
+    MAX(ba.timestamp) AS latest_event,
+    COUNT(DISTINCT ba.actor_id) AS unique_actors,
+    ARRAY_AGG(DISTINCT ba.network) AS blockchain_networks
+FROM
+    cmbc.blockchain_audit ba
+GROUP BY
+    ba.event_type;
+
+COMMENT ON VIEW cmbc.vw_blockchain_verification_status IS 'Provides verification status of blockchain audit records by event type';
+
+--Iot Sensor Anomaly Detection
+CREATE MATERIALIZED VIEW cmbc.mv_iot_anomalies AS
+SELECT
+    s.sensor_id,
+    s.sensor_name,
+    s.sensor_type,
+    s.location_id,
+    COUNT(r.reading_id) AS reading_count,
+    AVG(r.value) AS avg_value,
+    STDDEV(r.value) AS stddev_value,
+    MIN(r.value) AS min_value,
+    MAX(r.value) AS max_value,
+    COUNT(CASE WHEN r.value < s.normal_range[1] OR r.value > s.normal_range[2] THEN 1 END) AS anomaly_count,
+    COUNT(CASE WHEN r.value >= s.critical_threshold THEN 1 END) AS critical_count
+FROM
+    cmbc.iot_sensors s
+JOIN
+    cmbc.iot_sensor_readings r ON s.sensor_id = r.sensor_id
+WHERE
+    r.timestamp > CURRENT_TIMESTAMP - INTERVAL '7 days'
+GROUP BY
+    s.sensor_id, s.sensor_name, s.sensor_type, s.location_id;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_iot_anomalies IS 'Aggregates IoT sensor data to identify abnormal patterns and potential facility risks';
+
+
+--Threat indicator correlation
+CREATE MATERIALIZED VIEW cmbc.mv_threat_correlations AS
+WITH indicator_stats AS (
+    SELECT
+        indicator_type,
+        severity,
+        COUNT(*) AS indicator_count,
+        AVG(confidence) AS avg_confidence
+    FROM
+        cmbc.threat_indicators
+    WHERE
+        is_active = TRUE
+    GROUP BY
+        indicator_type, severity
+),
+incident_correlations AS (
+    SELECT
+        ti.indicator_type,
+        COUNT(DISTINCT i.incident_id) AS incident_count
+    FROM
+        cmbc.threat_indicators ti,
+        UNNEST(ti.related_incidents) AS incident_id
+    JOIN
+        cmbc.incidents i ON i.incident_id = incident_id
+    GROUP BY
+        ti.indicator_type
+)
+SELECT
+    is.indicator_type,
+    is.severity,
+    is.indicator_count,
+    is.avg_confidence,
+    COALESCE(ic.incident_count, 0) AS incident_count,
+    CASE
+        WHEN ic.incident_count IS NULL THEN 0
+        ELSE ic.incident_count::NUMERIC / is.indicator_count
+    END AS incident_ratio
+FROM
+    indicator_stats is
+LEFT JOIN
+    incident_correlations ic ON is.indicator_type = ic.indicator_type;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_threat_correlations IS 'Analyzes relationships between threat indicators and actual incidents to improve threat scoring';
+
+
+-- Threat Intelligence Enrichment Procedure
+CREATE OR REPLACE PROCEDURE cmbc.sp_enrich_threat_indicators(
+    p_feed_id UUID DEFAULT NULL,
+    p_min_severity VARCHAR(20) DEFAULT 'Medium',
+    OUT p_indicators_processed INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- In production, this would call external threat intelligence APIs
+    -- This simulates enrichment by adding related incident data
+
+    -- Update indicators with related incidents
+    WITH matched_incidents AS (
+        SELECT
+            ti.indicator_id,
+            ARRAY_AGG(i.incident_id) AS related_incidents
+        FROM
+            cmbc.threat_indicators ti
+        JOIN
+            cmbc.incidents i ON
+                i.incident_type = 'Cyber' AND
+                i.description LIKE '%' || ti.indicator_value || '%'
+        WHERE
+            (p_feed_id IS NULL OR ti.feed_id = p_feed_id)
+            AND ti.severity >= p_min_severity
+        GROUP BY
+            ti.indicator_id
+    )
+    UPDATE cmbc.threat_indicators ti
+    SET
+        related_incidents = mi.related_incidents,
+        updated_at = CURRENT_TIMESTAMP
+    FROM
+        matched_incidents mi
+    WHERE
+        ti.indicator_id = mi.indicator_id;
+
+    -- Get count of processed indicators
+    GET DIAGNOSTICS p_indicators_processed = ROW_COUNT;
+
+    -- Update feed last processed time
+    IF p_feed_id IS NOT NULL THEN
+        UPDATE cmbc.threat_intelligence_feeds
+        SET last_update = CURRENT_TIMESTAMP
+        WHERE feed_id = p_feed_id;
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_enrich_threat_indicators IS 'Enhances threat indicators with contextual data from internal incidents and external sources';
+
+-- Blockchain Audit Verification Procedure
+CREATE OR REPLACE PROCEDURE cmbc.sp_verify_blockchain_audit(
+    p_audit_id UUID,
+    p_verification_method VARCHAR(50),
+    p_verified_by VARCHAR(100),
+    OUT p_verification_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_transaction_hash VARCHAR(66);
+    v_block_number BIGINT;
+    v_network VARCHAR(50);
+BEGIN
+    -- Get audit record details
+    SELECT transaction_hash, block_number, network
+    INTO v_transaction_hash, v_block_number, v_network
+    FROM cmbc.blockchain_audit
+    WHERE audit_id = p_audit_id;
+
+    -- In production, this would verify against actual blockchain
+    -- This simulates verification with a 95% success rate
+
+    -- Simulate verification
+    INSERT INTO cmbc.audit_verification (
+        audit_id,
+        verification_method,
+        verification_result,
+        verified_by,
+        verified_at
+    ) VALUES (
+        p_audit_id,
+        p_verification_method,
+        jsonb_build_object(
+            'transactionHash', v_transaction_hash,
+            'blockNumber', v_block_number,
+            'status', CASE WHEN random() < 0.95 THEN 'Verified' ELSE 'Failed' END,
+            'network', v_network
+        ),
+        p_verified_by,
+        CURRENT_TIMESTAMP
+    ) RETURNING verification_id INTO p_verification_id;
+
+    -- Update audit record if verified
+    UPDATE cmbc.blockchain_audit
+    SET
+        verified = (SELECT verification_result->>'status' = 'Verified'
+                   FROM cmbc.audit_verification
+                   WHERE verification_id = p_verification_id),
+        verification_timestamp = CURRENT_TIMESTAMP
+    WHERE
+        audit_id = p_audit_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_verify_blockchain_audit IS 'Performs verification of blockchain audit records against the distributed ledger';
+
+--Iot Alert Processing engine
+CREATE OR REPLACE PROCEDURE cmbc.sp_process_iot_alerts(
+    p_cooldown_minutes INTEGER DEFAULT 5,
+    OUT p_alerts_processed INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Process new sensor readings that exceed thresholds
+    WITH alert_candidates AS (
+        SELECT
+            r.reading_id,
+            r.sensor_id,
+            r.value,
+            r.timestamp,
+            s.sensor_name,
+            s.sensor_type,
+            s.location_id,
+            s.critical_threshold,
+            s.normal_range,
+            ar.rule_id,
+            ar.severity,
+            ar.notification_template_id,
+            ar.auto_trigger_workflow_id
+        FROM
+            cmbc.iot_sensor_readings r
+        JOIN
+            cmbc.iot_sensors s ON r.sensor_id = s.sensor_id
+        JOIN
+            cmbc.iot_alert_rules ar ON
+                ar.sensor_type = s.sensor_type AND
+                ar.is_active = TRUE
+        WHERE
+            r.processed = FALSE AND
+            (r.value < s.normal_range[1] OR r.value > s.normal_range[2] OR r.value >= s.critical_threshold) AND
+            (r.timestamp > CURRENT_TIMESTAMP - (p_cooldown_minutes * INTERVAL '1 minute'))
+    ),
+    new_alerts AS (
+        INSERT INTO cmbc.iot_alerts (
+            sensor_id,
+            reading_id,
+            alert_value,
+            normal_range,
+            threshold_exceeded,
+            severity,
+            alert_time,
+            location_id,
+            rule_id
+        )
+        SELECT
+            sensor_id,
+            reading_id,
+            value,
+            normal_range,
+            CASE
+                WHEN value >= critical_threshold THEN 'CriticalThreshold'
+                WHEN value > normal_range[2] THEN 'UpperBound'
+                ELSE 'LowerBound'
+            END,
+            severity,
+            timestamp,
+            location_id,
+            rule_id
+        FROM
+            alert_candidates
+        RETURNING alert_id, sensor_id, severity, rule_id, location_id
+    )
+    SELECT COUNT(*) INTO p_alerts_processed FROM new_alerts;
+
+    -- Mark readings as processed
+    UPDATE cmbc.iot_sensor_readings r
+    SET processed = TRUE
+    FROM alert_candidates ac
+    WHERE r.reading_id = ac.reading_id;
+
+    -- Trigger notifications for critical alerts
+    INSERT INTO cmbc.notifications (
+        recipient_id,
+        message,
+        notification_type,
+        related_alert_id,
+        status
+    )
+    SELECT
+        cmt.member_id,
+        'IoT Alert: ' || s.sensor_name || ' at location ' || l.location_name ||
+        ' exceeded ' || a.threshold_exceeded || ' with value ' || a.alert_value,
+        'IoT Alert',
+        a.alert_id,
+        'Pending'
+    FROM
+        cmbc.iot_alerts a
+    JOIN
+        cmbc.iot_sensors s ON a.sensor_id = s.sensor_id
+    JOIN
+        cmbc.locations l ON a.location_id = l.location_id
+    JOIN
+        cmbc.crisis_management_team cmt ON cmt.role = 'Facility Manager'
+    WHERE
+        a.notification_sent = FALSE AND
+        a.severity IN ('Severe', 'Critical');
+
+    -- Update alert notification status
+    UPDATE cmbc.iot_alerts
+    SET notification_sent = TRUE
+    WHERE alert_id IN (
+        SELECT related_alert_id FROM cmbc.notifications
+        WHERE notification_type = 'IoT Alert' AND status = 'Pending'
+    );
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_process_iot_alerts IS 'Processes IoT sensor data to generate alerts when thresholds are exceeded and triggers notifications';
+
+---dynamic capacity planning engine
+CREATE TABLE cmbc.capacity_plans (
+    plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_name VARCHAR(255) NOT NULL,
+    scenario_type VARCHAR(100) NOT NULL CHECK (scenario_type IN ('Baseline', 'Peak', 'Disruption', 'Recovery')),
+    time_horizon_days INTEGER NOT NULL CHECK (time_horizon_days BETWEEN 1 AND 365),
+    resource_type VARCHAR(100) NOT NULL CHECK (resource_type IN ('Personnel', 'IT', 'Facility', 'SupplyChain')),
+    critical_process_ids UUID[] NOT NULL COMMENT 'Reference to critical business processes',
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.capacity_plans IS 'Master table for capacity planning scenarios that map resources to critical processes';
+
+CREATE TABLE cmbc.capacity_requirements (
+    requirement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id UUID NOT NULL REFERENCES cmbc.capacity_plans(plan_id),
+    process_id UUID NOT NULL COMMENT 'Reference to business process',
+    resource_type VARCHAR(100) NOT NULL,
+    normal_capacity NUMERIC(15,2) NOT NULL,
+    min_required_capacity NUMERIC(15,2) NOT NULL,
+    peak_capacity NUMERIC(15,2) NOT NULL,
+    lead_time_hours INTEGER NOT NULL COMMENT 'Time to ramp up capacity',
+    dependencies UUID[] COMMENT 'Other requirements that must be met first',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.capacity_requirements IS 'Defines specific capacity needs for each process in different scenarios';
+
+CREATE TABLE cmbc.capacity_sources (
+    source_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    requirement_id UUID NOT NULL REFERENCES cmbc.capacity_requirements(requirement_id),
+    source_type VARCHAR(100) NOT NULL CHECK (source_type IN ('Internal', 'Vendor', 'Cloud', 'Shared')),
+    source_name VARCHAR(255) NOT NULL,
+    available_capacity NUMERIC(15,2) NOT NULL,
+    activation_time_hours INTEGER NOT NULL,
+    cost_per_unit NUMERIC(15,2) NOT NULL,
+    contractual_terms TEXT,
+    is_preferred BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.capacity_sources IS 'Identifies available sources to meet capacity requirements with activation details';
+
+--capacity planning view --capacity gap analysis view
+CREATE OR REPLACE VIEW cmbc.vw_capacity_gaps AS
+SELECT
+    cp.plan_id,
+    cp.plan_name,
+    cp.scenario_type,
+    cr.resource_type,
+    SUM(cr.min_required_capacity) AS required_capacity,
+    SUM(COALESCE(cs.available_capacity, 0)) AS secured_capacity,
+    SUM(cr.min_required_capacity) - SUM(COALESCE(cs.available_capacity, 0)) AS capacity_gap,
+    MAX(cr.lead_time_hours) AS max_lead_time,
+    COUNT(DIST cr.process_id) AS affected_processes,
+    STRING_AGG(DIST cp2.process_name, ', ') AS process_names
+FROM
+    cmbc.capacity_plans cp
+JOIN
+    cmbc.capacity_requirements cr ON cp.plan_id = cr.plan_id
+LEFT JOIN
+    cmbc.capacity_sources cs ON cr.requirement_id = cs.requirement_id
+LEFT JOIN
+    cmbc.critical_processes cp2 ON cr.process_id = cp2.process_id
+GROUP BY
+    cp.plan_id, cp.plan_name, cp.scenario_type, cr.resource_type;
+
+COMMENT ON VIEW cmbc.vw_capacity_gaps IS 'Identifies capacity shortfalls across all planning scenarios with impact analysis';
+
+--resource utilization forecast view
+CREATE OR REPLACE VIEW cmbc.vw_resource_forecast AS
+WITH time_periods AS (
+    SELECT generate_series(
+        CURRENT_DATE,
+        CURRENT_DATE + INTERVAL '30 days',
+        INTERVAL '1 day'
+    ) AS period_date
+)
+SELECT
+    r.resource_type,
+    r.resource_id,
+    r.resource_name,
+    tp.period_date,
+    r.base_capacity,
+    COALESCE(d.demand, 0) AS projected_demand,
+    r.base_capacity - COALESCE(d.demand, 0) AS surplus_deficit,
+    CASE
+        WHEN COALESCE(d.demand, 0) = 0 THEN 0
+        WHEN r.base_capacity = 0 THEN 100
+        ELSE (COALESCE(d.demand, 0) / r.base_capacity) * 100
+    END AS utilization_pct
+FROM
+    cmbc.resources r
+CROSS JOIN
+    time_periods tp
+LEFT JOIN (
+    SELECT
+        resource_type,
+        resource_id,
+        DATE_TRUNC('day', demand_date) AS demand_date,
+        SUM(demand_amount) AS demand
+    FROM
+        cmbc.resource_demand_forecasts
+    GROUP BY
+        resource_type, resource_id, DATE_TRUNC('day', demand_date)
+) d ON r.resource_type = d.resource_type
+    AND r.resource_id = d.resource_id
+    AND tp.period_date = d.demand_date;
+
+COMMENT ON VIEW cmbc.vw_resource_forecast IS 'Projects resource utilization over 30-day horizon to identify future constraints';
+
+--capacity planning stored procedures
+CREATE OR REPLACE PROCEDURE cmbc.sp_allocate_capacity(
+    p_incident_id UUID,
+    p_plan_id UUID DEFAULT NULL,
+    OUT p_resources_allocated INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_severity VARCHAR(20);
+    v_impacted_processes UUID[];
+BEGIN
+    -- Get incident details
+    SELECT severity, impacted_processes
+    INTO v_severity, v_impacted_processes
+    FROM cmbc.incidents
+    WHERE incident_id = p_incident_id;
+
+    -- Determine appropriate capacity plan if not specified
+    IF p_plan_id IS NULL THEN
+        SELECT plan_id INTO p_plan_id
+        FROM cmbc.capacity_plans
+        WHERE scenario_type = CASE
+            WHEN v_severity = 'Critical' THEN 'Disruption'
+            ELSE 'Peak'
+        END
+        LIMIT 1;
+    END IF;
+
+    -- Allocate resources for impacted processes
+    WITH required_resources AS (
+        SELECT
+            cr.resource_type,
+            cr.min_required_capacity,
+            cs.source_id,
+            cs.source_name,
+            cs.available_capacity,
+            cs.activation_time_hours
+        FROM
+            cmbc.capacity_requirements cr
+        JOIN
+            cmbc.capacity_sources cs ON cr.requirement_id = cs.requirement_id
+        WHERE
+            cr.plan_id = p_plan_id
+            AND cr.process_id = ANY(v_impacted_processes)
+    )
+    INSERT INTO cmbc.resource_allocations (
+        incident_id,
+        resource_type,
+        source_id,
+        source_name,
+        allocated_amount,
+        activation_time,
+        expected_ready_time
+    )
+    SELECT
+        p_incident_id,
+        resource_type,
+        source_id,
+        source_name,
+        LEAST(min_required_capacity, available_capacity),
+        activation_time_hours,
+        CURRENT_TIMESTAMP + (activation_time_hours * INTERVAL '1 hour')
+    FROM
+        required_resources;
+
+    -- Get count of allocated resources
+    GET DIAGNOSTICS p_resources_allocated = ROW_COUNT;
+
+    -- Update incident record
+    UPDATE cmbc.incidents
+    SET
+        capacity_plan_id = p_plan_id,
+        resource_allocation_time = CURRENT_TIMESTAMP
+    WHERE
+        incident_id = p_incident_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_allocate_capacity IS 'Automatically allocates resources based on incident severity and impacted processes using predefined capacity plans';
+
+---capacity optimization procedure
+CREATE OR REPLACE PROCEDURE cmbc.sp_optimize_capacity(
+    p_plan_id UUID,
+    p_max_cost NUMERIC(15,2) DEFAULT NULL,
+    p_max_lead_time_hours INTEGER DEFAULT NULL,
+    OUT p_recommendations JSONB
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Generate optimized capacity sourcing recommendations
+    WITH ranked_sources AS (
+        SELECT
+            cr.requirement_id,
+            cr.process_id,
+            cr.resource_type,
+            cr.min_required_capacity,
+            cs.source_id,
+            cs.source_name,
+            cs.available_capacity,
+            cs.activation_time_hours,
+            cs.cost_per_unit,
+            ROW_NUMBER() OVER (
+                PARTITION BY cr.requirement_id
+                ORDER BY
+                    CASE WHEN p_max_lead_time_hours IS NOT NULL AND cs.activation_time_hours > p_max_lead_time_hours THEN 1 ELSE 0 END,
+                    CASE WHEN p_max_cost IS NOT NULL AND (cs.cost_per_unit * cr.min_required_capacity) > p_max_cost THEN 1 ELSE 0 END,
+                    cs.activation_time_hours,
+                    cs.cost_per_unit
+            ) AS source_rank
+        FROM
+            cmbc.capacity_requirements cr
+        JOIN
+            cmbc.capacity_sources cs ON cr.requirement_id = cs.requirement_id
+        WHERE
+            cr.plan_id = p_plan_id
+    )
+    SELECT
+        jsonb_agg(
+            jsonb_build_object(
+                'requirement_id', rs.requirement_id,
+                'process_id', rs.process_id,
+                'resource_type', rs.resource_type,
+                'recommended_source', jsonb_build_object(
+                    'source_id', rs.source_id,
+                    'source_name', rs.source_name,
+                    'allocated_amount', LEAST(rs.min_required_capacity, rs.available_capacity),
+                    'activation_time', rs.activation_time_hours,
+                    'total_cost', rs.cost_per_unit * LEAST(rs.min_required_capacity, rs.available_capacity)
+                ),
+                'alternative_sources', (
+                    SELECT jsonb_agg(
+                        jsonb_build_object(
+                            'source_id', alt.source_id,
+                            'source_name', alt.source_name,
+                            'available_capacity', alt.available_capacity,
+                            'activation_time', alt.activation_time_hours,
+                            'cost_per_unit', alt.cost_per_unit
+                        )
+                    )
+                    FROM ranked_sources alt
+                    WHERE alt.requirement_id = rs.requirement_id AND alt.source_rank > 1
+                )
+            )
+        ) INTO p_recommendations
+    FROM
+        ranked_sources rs
+    WHERE
+        rs.source_rank = 1;
+
+    -- Store optimization results
+    INSERT INTO cmbc.capacity_optimizations (
+        plan_id,
+        optimization_time,
+        parameters,
+        recommendations
+    ) VALUES (
+        p_plan_id,
+        CURRENT_TIMESTAMP,
+        jsonb_build_object('max_cost', p_max_cost, 'max_lead_time', p_max_lead_time_hours),
+        p_recommendations
+    );
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_optimize_capacity IS 'Generates cost and time optimized capacity sourcing recommendations within constraints';
+
+--materialized views for capacity planning
+CREATE MATERIALIZED VIEW cmbc.mv_capacity_utilization AS
+SELECT
+    cs.source_id,
+    cs.source_name,
+    cs.source_type,
+    cs.resource_type,
+    SUM(cr.min_required_capacity) AS total_committed,
+    cs.available_capacity,
+    cs.available_capacity - SUM(cr.min_required_capacity) AS remaining_capacity,
+    COUNT(DIST cr.plan_id) AS supporting_plans,
+    COUNT(DIST cr.process_id) AS supported_processes,
+    MIN(cs.activation_time_hours) AS min_activation_time,
+    MAX(cs.activation_time_hours) AS max_activation_time
+FROM
+    cmbc.capacity_sources cs
+JOIN
+    cmbc.capacity_requirements cr ON cs.requirement_id = cr.requirement_id
+GROUP BY
+    cs.source_id, cs.source_name, cs.source_type, cs.resource_type, cs.available_capacity;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_capacity_utilization IS 'Tracks utilization of capacity sources across all plans to identify overallocation risks';
+
+
+--process resilience scoring
+CREATE MATERIALIZED VIEW cmbc.mv_process_resilience AS
+WITH process_capacity AS (
+    SELECT
+        cp.process_id,
+        cp.process_name,
+        COUNT(DIST cr.requirement_id) AS capacity_requirements,
+        COUNT(DIST cs.source_id) AS capacity_sources,
+        MIN(cs.activation_time_hours) AS fastest_recovery,
+        MAX(cs.activation_time_hours) AS slowest_recovery,
+        SUM(cs.available_capacity) AS total_available,
+        SUM(cr.min_required_capacity) AS total_required
+    FROM
+        cmbc.critical_processes cp
+    LEFT JOIN
+        cmbc.capacity_requirements cr ON cp.process_id = cr.process_id
+    LEFT JOIN
+        cmbc.capacity_sources cs ON cr.requirement_id = cs.requirement_id
+    GROUP BY
+        cp.process_id, cp.process_name
+)
+SELECT
+    pc.*,
+    CASE
+        WHEN pc.capacity_sources = 0 THEN 0
+        WHEN pc.total_available >= pc.total_required * 1.5 THEN 100
+        WHEN pc.total_available >= pc.total_required THEN 75
+        WHEN pc.total_available >= pc.total_required * 0.5 THEN 50
+        ELSE 25
+    END AS capacity_score,
+    CASE
+        WHEN pc.fastest_recovery IS NULL THEN 0
+        WHEN pc.fastest_recovery <= 1 THEN 100
+        WHEN pc.fastest_recovery <= 4 THEN 75
+        WHEN pc.fastest_recovery <= 24 THEN 50
+        ELSE 25
+    END AS speed_score,
+    CASE
+        WHEN pc.capacity_sources = 0 THEN 0
+        WHEN pc.capacity_sources >= 3 THEN 100
+        WHEN pc.capacity_sources >= 2 THEN 75
+        ELSE 50
+    END AS redundancy_score
+FROM
+    process_capacity pc;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_process_resilience IS 'Calculates comprehensive resilience scores for processes based on capacity, recovery speed, and redundancy';
+
+
+-- resource pool management
+CREATE TABLE cmbc.resource_pools (
+    pool_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pool_name VARCHAR(255) NOT NULL,
+    resource_type VARCHAR(100) NOT NULL,
+    total_capacity NUMERIC(15,2) NOT NULL,
+    allocated_capacity NUMERIC(15,2) NOT NULL DEFAULT 0,
+    available_capacity NUMERIC(15,2) GENERATED ALWAYS AS (total_capacity - allocated_capacity) STORED,
+    utilization_pct NUMERIC(5,2) GENERATED ALWAYS AS (
+        CASE
+            WHEN total_capacity = 0 THEN 0
+            ELSE (allocated_capacity / total_capacity) * 100
+        END
+    ) STORED,
+    auto_scaling_capability BOOLEAN NOT NULL DEFAULT FALSE,
+    max_scaled_capacity NUMERIC(15,2),
+    scaling_time_minutes INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.resource_pools IS 'Manages pools of shared resources with dynamic allocation and scaling capabilities';
+
+CREATE TABLE cmbc.pool_allocations (
+    allocation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pool_id UUID NOT NULL REFERENCES cmbc.resource_pools(pool_id),
+    incident_id UUID REFERENCES cmbc.incidents(incident_id),
+    plan_id UUID REFERENCES cmbc.capacity_plans(plan_id),
+    allocated_amount NUMERIC(15,2) NOT NULL,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Reserved', 'Active', 'Released', 'Expired')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.pool_allocations IS 'Tracks allocation of resources from pools to incidents and plans';
+
+
+--capacity planning stored procedures
+CREATE OR REPLACE PROCEDURE cmbc.sp_scale_resource_pool(
+    p_pool_id UUID,
+    p_target_capacity NUMERIC(15,2),
+    OUT p_success BOOLEAN,
+    OUT p_message TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_max_capacity NUMERIC(15,2);
+    v_scaling_capable BOOLEAN;
+BEGIN
+    -- Check pool capabilities
+    SELECT auto_scaling_capability, max_scaled_capacity
+    INTO v_scaling_capable, v_max_capacity
+    FROM cmbc.resource_pools
+    WHERE pool_id = p_pool_id;
+
+    IF NOT v_scaling_capable THEN
+        p_success := FALSE;
+        p_message := 'Pool does not support auto-scaling';
+        RETURN;
+    END IF;
+
+    IF p_target_capacity > v_max_capacity THEN
+        p_success := FALSE;
+        p_message := 'Target capacity exceeds maximum scalable capacity';
+        RETURN;
+    END IF;
+
+    -- In production, this would trigger cloud APIs or vendor systems
+    -- Here we simulate scaling with a 90% success rate
+
+    IF random() < 0.9 THEN
+        UPDATE cmbc.resource_pools
+        SET
+            total_capacity = p_target_capacity,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            pool_id = p_pool_id;
+
+        p_success := TRUE;
+        p_message := 'Pool successfully scaled to ' || p_target_capacity;
+    ELSE
+        p_success := FALSE;
+        p_message := 'Scaling operation failed due to simulated provider issue';
+    END IF;
+
+    -- Log scaling attempt
+    INSERT INTO cmbc.pool_scaling_events (
+        pool_id,
+        target_capacity,
+        success,
+        message,
+        initiated_by
+    ) VALUES (
+        p_pool_id,
+        p_target_capacity,
+        p_success,
+        p_message,
+        'system'
+    );
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_scale_resource_pool IS 'Manages dynamic scaling of resource pools to meet changing capacity demands';
+
+
+-- ai-powered decision support system
+CREATE TABLE cmbc.decision_support_models (
+    model_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    model_name VARCHAR(255) NOT NULL,
+    model_version VARCHAR(50) NOT NULL,
+    model_type VARCHAR(100) NOT NULL CHECK (model_type IN ('ImpactAnalysis', 'ResourceAllocation', 'CommunicationStrategy')),
+    training_data_range DATERANGE NOT NULL,
+    accuracy_metrics JSONB NOT NULL,
+    last_retrained TIMESTAMP WITH TIME ZONE,
+    input_parameters JSONB NOT NULL,
+    output_schema JSONB NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.decision_support_models IS 'Stores metadata for AI models that provide real-time decision support during crises';
+
+CREATE TABLE cmbc.model_recommendations (
+    recommendation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    incident_id UUID REFERENCES cmbc.incidents(incident_id),
+    model_id UUID REFERENCES cmbc.decision_support_models(model_id),
+    recommendation_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    confidence_score NUMERIC(5,2) NOT NULL CHECK (confidence_score BETWEEN 0 AND 1),
+    recommended_actions JSONB NOT NULL,
+    expected_outcomes JSONB,
+    accepted BOOLEAN DEFAULT NULL,
+    acceptance_time TIMESTAMP WITH TIME ZONE,
+    accepted_by VARCHAR(100),
+    actual_outcome JSONB,
+    outcome_accuracy NUMERIC(5,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.model_recommendations IS 'Tracks AI-generated recommendations and their acceptance/outcomes for continuous improvement';
+
+
+--virtual command center integration
+CREATE TABLE cmbc.virtual_command_centers (
+    vcc_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vcc_name VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Active', 'Standby', 'Maintenance')),
+    activation_time TIMESTAMP WITH TIME ZONE,
+    deactivation_time TIMESTAMP WITH TIME ZONE,
+    max_participants INTEGER NOT NULL,
+    current_participants INTEGER NOT NULL DEFAULT 0,
+    incident_id UUID REFERENCES cmbc.incidents(incident_id),
+    collaboration_tools JSONB NOT NULL COMMENT 'Integrated tools like chat, video, document sharing',
+    access_controls JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.virtual_command_centers IS 'Manages virtual collaboration spaces for crisis response teams';
+
+CREATE TABLE cmbc.vcc_participants (
+    participant_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vcc_id UUID NOT NULL REFERENCES cmbc.virtual_command_centers(vcc_id),
+    user_id VARCHAR(100) NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    join_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    leave_time TIMESTAMP WITH TIME ZONE,
+    active_duration INTERVAL GENERATED ALWAYS AS (
+        CASE WHEN leave_time IS NULL THEN NULL ELSE leave_time - join_time END
+    ) STORED,
+    contributions JSONB COMMENT 'Chat messages, shared files, etc.',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.vcc_participants IS 'Tracks participants in virtual command centers and their contributions';
+
+--automated impact assessment engine
+CREATE TABLE cmbc.impact_assessment_templates (
+    template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_name VARCHAR(255) NOT NULL,
+    incident_type VARCHAR(100) NOT NULL,
+    severity_level VARCHAR(20) NOT NULL,
+    assessment_parameters JSONB NOT NULL COMMENT 'Fields and metrics to assess',
+    weighting_factors JSONB NOT NULL COMMENT 'Relative importance of each parameter',
+    scoring_algorithm TEXT NOT NULL,
+    version VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.impact_assessment_templates IS 'Standardized templates for assessing incident impacts consistently';
+
+CREATE TABLE cmbc.automated_assessments (
+    assessment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    incident_id UUID NOT NULL REFERENCES cmbc.incidents(incident_id),
+    template_id UUID REFERENCES cmbc.impact_assessment_templates(template_id),
+    assessment_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    raw_data_sources JSONB NOT NULL,
+    calculated_impacts JSONB NOT NULL,
+    overall_score NUMERIC(10,2) NOT NULL,
+    confidence_score NUMERIC(5,2) NOT NULL,
+    manual_override BOOLEAN NOT NULL DEFAULT FALSE,
+    override_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.automated_assessments IS 'Stores results of automated impact assessments with data provenance';
+
+
+-- AI recommendation performance view
+CREATE OR REPLACE VIEW cmbc.vw_ai_recommendation_performance AS
+SELECT
+    dsm.model_name,
+    dsm.model_type,
+    COUNT(mr.recommendation_id) AS total_recommendations,
+    AVG(mr.confidence_score) AS avg_confidence,
+    SUM(CASE WHEN mr.accepted = TRUE THEN 1 ELSE 0 END) AS accepted_count,
+    SUM(CASE WHEN mr.accepted = FALSE THEN 1 ELSE 0 END) AS rejected_count,
+    AVG(mr.outcome_accuracy) FILTER (WHERE mr.outcome_accuracy IS NOT NULL) AS avg_accuracy,
+    COUNT(DISTINCT mr.incident_id) AS incidents_served,
+    MAX(mr.recommendation_time) AS latest_recommendation
+FROM
+    cmbc.model_recommendations mr
+JOIN
+    cmbc.decision_support_models dsm ON mr.model_id = dsm.model_id
+GROUP BY
+    dsm.model_name, dsm.model_type;
+
+COMMENT ON VIEW cmbc.vw_ai_recommendation_performance IS 'Tracks performance metrics for AI decision support models to guide improvements';
+
+-- virtual command center activity view
+CREATE OR REPLACE VIEW cmbc.vw_vcc_activity AS
+SELECT
+    vcc.vcc_id,
+    vcc.vcc_name,
+    vcc.status,
+    vcc.activation_time,
+    vcc.current_participants,
+    i.incident_name,
+    i.severity,
+    COUNT(DISTINCT vp.user_id) AS unique_participants,
+    MAX(vp.active_duration) AS max_session_duration,
+    AVG(EXTRACT(EPOCH FROM vp.active_duration)/60) AS avg_session_minutes,
+    COUNT(DIST CASE WHEN vp.contributions IS NOT NULL THEN vp.participant_id END) AS active_contributors
+FROM
+    cmbc.virtual_command_centers vcc
+LEFT JOIN
+    cmbc.incidents i ON vcc.incident_id = i.incident_id
+LEFT JOIN
+    cmbc.vcc_participants vp ON vcc.vcc_id = vp.vcc_id
+GROUP BY
+    vcc.vcc_id, vcc.vcc_name, vcc.status, vcc.activation_time,
+    vcc.current_participants, i.incident_name, i.severity;
+
+COMMENT ON VIEW cmbc.vw_vcc_activity IS 'Provides insights into virtual command center utilization and collaboration patterns';
+
+--incident impact trend analysis
+CREATE MATERIALIZED VIEW cmbc.mv_impact_trends AS
+SELECT
+    DATE_TRUNC('month', ia.assessment_time) AS month,
+    iat.incident_type,
+    AVG(ia.overall_score) AS avg_impact_score,
+    STDDEV(ia.overall_score) AS impact_volatility,
+    COUNT(DISTINCT ia.incident_id) AS incidents_assessed,
+    PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY ia.overall_score) AS p90_impact,
+    ARRAY_AGG(DISTINCT i.severity) AS severity_levels,
+    COUNT(DIST CASE WHEN ia.manual_override = TRUE THEN ia.assessment_id END) AS manual_overrides
+FROM
+    cmbc.automated_assessments ia
+JOIN
+    cmbc.impact_assessment_templates iat ON ia.template_id = iat.template_id
+JOIN
+    cmbc.incidents i ON ia.incident_id = i.incident_id
+WHERE
+    ia.assessment_time > CURRENT_DATE - INTERVAL '1 year'
+GROUP BY
+    DATE_TRUNC('month', ia.assessment_time), iat.incident_type;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_impact_trends IS 'Analyzes trends in incident impacts over time by type and severity';
+
+--decision modele ffectiveness
+CREATE MATERIALIZED VIEW cmbc.mv_model_effectiveness AS
+WITH outcome_analysis AS (
+    SELECT
+        mr.model_id,
+        dsm.model_name,
+        dsm.model_type,
+        COUNT(*) FILTER (WHERE mr.accepted = TRUE AND mr.outcome_accuracy > 0.8) AS high_quality_acceptances,
+        COUNT(*) FILTER (WHERE mr.accepted = TRUE) AS total_acceptances,
+        COUNT(*) FILTER (WHERE mr.accepted = FALSE AND mr.outcome_accuracy < 0.5) AS good_rejections,
+        COUNT(*) FILTER (WHERE mr.accepted = FALSE) AS total_rejections,
+        AVG(mr.outcome_accuracy) FILTER (WHERE mr.outcome_accuracy IS NOT NULL) AS avg_accuracy
+    FROM
+        cmbc.model_recommendations mr
+    JOIN
+        cmbc.decision_support_models dsm ON mr.model_id = dsm.model_id
+    GROUP BY
+        mr.model_id, dsm.model_name, dsm.model_type
+)
+SELECT
+    *,
+    CASE
+        WHEN total_acceptances = 0 THEN 0
+        ELSE (high_quality_acceptances::FLOAT / total_acceptances) * 100
+    END AS acceptance_quality_pct,
+    CASE
+        WHEN total_rejections = 0 THEN 0
+        ELSE (good_rejections::FLOAT / total_rejections) * 100
+    END AS rejection_quality_pct
+FROM
+    outcome_analysis;
+
+COMMENT ON MATERIALIZED VIEW cmbc.mv_model_effectiveness IS 'Evaluates the effectiveness of AI decision models by analyzing acceptance patterns and outcomes';
+
+--AI decision support orchestrator
+CREATE OR REPLACE PROCEDURE cmbc.sp_generate_ai_recommendations(
+    p_incident_id UUID,
+    p_model_types VARCHAR(100)[] DEFAULT NULL,
+    OUT p_recommendations_generated INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_incident_type VARCHAR(100);
+    v_severity VARCHAR(20);
+BEGIN
+    -- Get incident details
+    SELECT incident_type, severity INTO v_incident_type, v_severity
+    FROM cmbc.incidents WHERE incident_id = p_incident_id;
+
+    -- Generate recommendations from relevant models
+    INSERT INTO cmbc.model_recommendations (
+        incident_id,
+        model_id,
+        recommendation_time,
+        confidence_score,
+        recommended_actions,
+        expected_outcomes
+    )
+    SELECT
+        p_incident_id,
+        m.model_id,
+        CURRENT_TIMESTAMP,
+        -- Simulate confidence score based on incident severity
+        CASE
+            WHEN v_severity = 'Critical' THEN 0.7 + random()*0.3
+            WHEN v_severity = 'High' THEN 0.5 + random()*0.3
+            ELSE 0.3 + random()*0.4
+        END,
+        -- Simulate recommended actions based on model type
+        CASE m.model_type
+            WHEN 'ImpactAnalysis' THEN
+                jsonb_build_array(
+                    jsonb_build_object(
+                        'action', 'Conduct detailed impact assessment',
+                        'priority', 'High',
+                        'resources', jsonb_build_array('AssessmentTeam')
+                )
+            WHEN 'ResourceAllocation' THEN
+                jsonb_build_array(
+                    jsonb_build_object(
+                        'action', 'Activate backup resources',
+                        'priority', 'Critical',
+                        'resources', jsonb_build_array('BackupSite', 'CloudCapacity')
+                )
+            WHEN 'CommunicationStrategy' THEN
+                jsonb_build_array(
+                    jsonb_build_object(
+                        'action', 'Issue stakeholder notification',
+                        'priority', 'Medium',
+                        'channels', jsonb_build_array('Email', 'SMS')
+                )
+        END,
+        -- Simulate expected outcomes
+        jsonb_build_object(
+            'time_to_resolution',
+            CASE
+                WHEN v_severity = 'Critical' THEN '4-8 hours'
+                WHEN v_severity = 'High' THEN '24-48 hours'
+                ELSE '3-5 days'
+            END,
+            'success_probability',
+            CASE
+                WHEN v_severity = 'Critical' THEN '60-70%'
+                WHEN v_severity = 'High' THEN '75-85%'
+                ELSE '90-95%'
+            END
+        )
+    FROM
+        cmbc.decision_support_models m
+    WHERE
+        m.is_active = TRUE
+        AND (p_model_types IS NULL OR m.model_type = ANY(p_model_types));
+
+    -- Get count of generated recommendations
+    GET DIAGNOSTICS p_recommendations_generated = ROW_COUNT;
+
+    -- Log recommendation generation
+    INSERT INTO cmbc.incident_actions (
+        incident_id,
+        action_type,
+        action_details,
+        performed_by,
+        performed_at
+    ) VALUES (
+        p_incident_id,
+        'AIRecommendationGenerated',
+        jsonb_build_object('count', p_recommendations_generated, 'model_types', COALESCE(p_model_types, ARRAY['All'])),
+        'system',
+        CURRENT_TIMESTAMP
+    );
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_generate_ai_recommendations IS 'Orchestrates the generation of AI-powered recommendations for incident response based on incident characteristics';
+
+
+--virtual command center auto-scaler
+CREATE OR REPLACE PROCEDURE cmbc.sp_scale_virtual_command_center(
+    p_vcc_id UUID,
+    OUT p_action_taken BOOLEAN,
+    OUT p_message TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_current_participants INTEGER;
+    v_max_participants INTEGER;
+    v_incident_severity VARCHAR(20);
+    v_participant_growth_rate NUMERIC(10,2);
+    v_recommended_capacity INTEGER;
+BEGIN
+    -- Get current VCC status
+    SELECT
+        current_participants,
+        max_participants,
+        i.severity
+    INTO
+        v_current_participants,
+        v_max_participants,
+        v_incident_severity
+    FROM
+        cmbc.virtual_command_centers vcc
+    JOIN
+        cmbc.incidents i ON vcc.incident_id = i.incident_id
+    WHERE
+        vcc.vcc_id = p_vcc_id;
+
+    -- Calculate participant growth rate (simplified)
+    SELECT
+        COUNT(*)::NUMERIC / EXTRACT(EPOCH FROM (MAX(join_time) - MIN(join_time))/60
+    INTO
+        v_participant_growth_rate
+    FROM
+        cmbc.vcc_participants
+    WHERE
+        vcc_id = p_vcc_id
+        AND join_time > CURRENT_TIMESTAMP - INTERVAL '1 hour';
+
+    -- Determine recommended capacity based on severity and growth
+    v_recommended_capacity :=
+        CASE
+            WHEN v_incident_severity = 'Critical' THEN LEAST(v_current_participants * 2, 500)
+            WHEN v_incident_severity = 'High' THEN LEAST(v_current_participants * 1.5, 300)
+            ELSE LEAST(v_current_participants * 1.2, 200)
+        END;
+
+    -- Only scale if needed and different from current max
+    IF v_recommended_capacity > v_max_participants THEN
+        UPDATE cmbc.virtual_command_centers
+        SET
+            max_participants = v_recommended_capacity,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            vcc_id = p_vcc_id;
+
+        p_action_taken := TRUE;
+        p_message := 'Scaled VCC capacity from ' || v_max_participants || ' to ' || v_recommended_capacity;
+
+        -- Log scaling event
+        INSERT INTO cmbc.vcc_scaling_events (
+            vcc_id,
+            old_capacity,
+            new_capacity,
+            reason,
+            metrics
+        ) VALUES (
+            p_vcc_id,
+            v_max_participants,
+            v_recommended_capacity,
+            'Auto-scale based on participant growth',
+            jsonb_build_object(
+                'current_participants', v_current_participants,
+                'growth_rate', v_participant_growth_rate,
+                'incident_severity', v_incident_severity
+            )
+        );
+    ELSE
+        p_action_taken := FALSE;
+        p_message := 'No scaling needed - current capacity sufficient';
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE cmbc.sp_scale_virtual_command_center IS 'Automatically adjusts virtual command center capacity based on participant growth and incident severity';
+
+--predictive maintenance integration
+CREATE TABLE cmbc.predictive_maintenance_alerts (
+    alert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    equipment_id VARCHAR(100) NOT NULL,
+    equipment_type VARCHAR(100) NOT NULL,
+    failure_mode VARCHAR(255) NOT NULL,
+    predicted_failure_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    confidence_score NUMERIC(5,2) NOT NULL,
+    recommended_actions TEXT[] NOT NULL,
+    maintenance_window_start TIMESTAMP WITH TIME ZONE,
+    maintenance_window_end TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Pending', 'Scheduled', 'Completed', 'Dismissed')),
+    actual_failure_time TIMESTAMP WITH TIME ZONE,
+    prediction_accuracy VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE cmbc.predictive_maintenance_alerts IS 'Tracks predicted equipment failures from AI models to prevent operational disruptions';
+
+----------------------ual
 -- ESG Risk Management
 ----------------------
 
+CREATE SCHEMA esg;
+
+
+CREATE TABLE esg.risk_categories (
+    category_id SERIAL PRIMARY KEY,
+    category_name VARCHAR(100) NOT NULL,
+    category_type VARCHAR(50) NOT NULL CHECK (category_type IN ('Environmental', 'Social', 'Governance')),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.risk_categories IS 'Master table for ESG risk categories (Environmental, Social, Governance)';
+COMMENT ON COLUMN esg.risk_categories.category_type IS 'Type of ESG risk: Environmental, Social, or Governance';
+
+
+CREATE TABLE esg.risks (
+    risk_id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES esg.risk_categories(category_id),
+    risk_name VARCHAR(200) NOT NULL,
+    risk_description TEXT,
+    risk_owner VARCHAR(100),
+    materiality_level VARCHAR(20) CHECK (materiality_level IN ('Low', 'Medium', 'High')),
+    risk_exposure_score INTEGER CHECK (risk_exposure_score BETWEEN 1 AND 10),
+    mitigation_strategy TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.risks IS 'Detailed ESG risks with categorization and scoring';
+COMMENT ON COLUMN esg.risks.materiality_level IS 'Materiality level of the risk (Low, Medium, High)';
+COMMENT ON COLUMN esg.risks.risk_exposure_score IS 'Risk exposure score from 1 (low) to 10 (high)';
+
+
+CREATE TABLE esg.risk_assessments (
+    assessment_id SERIAL PRIMARY KEY,
+    risk_id INTEGER REFERENCES esg.risks(risk_id),
+    assessment_date DATE NOT NULL,
+    assessed_by VARCHAR(100) NOT NULL,
+    likelihood_score INTEGER CHECK (likelihood_score BETWEEN 1 AND 5),
+    impact_score INTEGER CHECK (impact_score BETWEEN 1 AND 5),
+    overall_score INTEGER GENERATED ALWAYS AS (likelihood_score * impact_score) STORED,
+    assessment_notes TEXT,
+    next_review_date DATE,
+    status VARCHAR(20) CHECK (status IN ('Open', 'In Progress', 'Mitigated', 'Closed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.risk_assessments IS 'Detailed assessments of ESG risks with scoring';
+COMMENT ON COLUMN esg.risk_assessments.likelihood_score IS 'Likelihood score from 1 (rare) to 5 (almost certain)';
+COMMENT ON COLUMN esg.risk_assessments.impact_score IS 'Impact score from 1 (minor) to 5 (severe)';
+
+
+CREATE TABLE esg.data_collection (
+    data_id SERIAL PRIMARY KEY,
+    risk_id INTEGER REFERENCES esg.risks(risk_id),
+    data_source VARCHAR(200) NOT NULL,
+    collection_method VARCHAR(100),
+    collection_frequency VARCHAR(50),
+    reporting_standard VARCHAR(50) CHECK (reporting_standard IN ('GRI', 'SASB', 'TCFD', 'CSRD', 'Other')),
+    data_accuracy DECIMAL(5,2) CHECK (data_accuracy BETWEEN 0 AND 100),
+    last_collection_date DATE,
+    next_collection_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.data_collection IS 'Tracking of ESG data collection processes and standards';
+COMMENT ON COLUMN esg.data_collection.data_accuracy IS 'Estimated accuracy percentage of the collected data';
+
+
+CREATE TABLE esg.stakeholders (
+    stakeholder_id SERIAL PRIMARY KEY,
+    stakeholder_name VARCHAR(200) NOT NULL,
+    stakeholder_type VARCHAR(50) CHECK (stakeholder_type IN ('Investor', 'Employee', 'Customer', 'Supplier', 'Regulator', 'Community', 'Other')),
+    contact_email VARCHAR(100),
+    contact_phone VARCHAR(20),
+    engagement_level VARCHAR(20) CHECK (engagement_level IN ('Low', 'Medium', 'High')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.stakeholders IS 'List of stakeholders involved in ESG matters';
+
+CREATE TABLE esg.stakeholder_engagement (
+    engagement_id SERIAL PRIMARY KEY,
+    stakeholder_id INTEGER REFERENCES esg.stakeholders(stakeholder_id),
+    engagement_date DATE NOT NULL,
+    engagement_type VARCHAR(100) NOT NULL,
+    engagement_topic VARCHAR(200),
+    satisfaction_score INTEGER CHECK (satisfaction_score BETWEEN 1 AND 10),
+    notes TEXT,
+    follow_up_required BOOLEAN DEFAULT FALSE,
+    follow_up_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.stakeholder_engagement IS 'Records of stakeholder engagement activities';
+COMMENT ON COLUMN esg.stakeholder_engagement.satisfaction_score IS 'Stakeholder satisfaction score from 1 (low) to 10 (high)';
+
+
+CREATE TABLE esg.performance_metrics (
+    metric_id SERIAL PRIMARY KEY,
+    metric_name VARCHAR(200) NOT NULL,
+    metric_description TEXT,
+    category_id INTEGER REFERENCES esg.risk_categories(category_id),
+    unit_of_measure VARCHAR(50),
+    target_value DECIMAL(15,2),
+    reporting_frequency VARCHAR(50),
+    benchmark_value DECIMAL(15,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.performance_metrics IS 'Definition of ESG performance metrics and KPIs';
+
+
+CREATE TABLE esg.performance_data (
+    performance_id SERIAL PRIMARY KEY,
+    metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    reporting_period DATE NOT NULL,
+    actual_value DECIMAL(15,2) NOT NULL,
+    data_source VARCHAR(200),
+    notes TEXT,
+    verification_status VARCHAR(20) CHECK (verification_status IN ('Unverified', 'In Review', 'Verified')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_metric_period UNIQUE (metric_id, reporting_period)
+);
+
+COMMENT ON TABLE esg.performance_data IS 'Actual performance data for ESG metrics';
+
+
+CREATE TABLE esg.initiatives (
+    initiative_id SERIAL PRIMARY KEY,
+    initiative_name VARCHAR(200) NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    budget DECIMAL(15,2),
+    status VARCHAR(20) CHECK (status IN ('Planned', 'In Progress', 'Completed', 'On Hold')),
+    responsible_party VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.initiatives IS 'ESG improvement initiatives and projects';
+
+
+CREATE TABLE esg.initiative_metrics (
+    initiative_metric_id SERIAL PRIMARY KEY,
+    initiative_id INTEGER REFERENCES esg.initiatives(initiative_id),
+    metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    target_improvement DECIMAL(15,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_initiative_metric UNIQUE (initiative_id, metric_id)
+);
+
+COMMENT ON TABLE esg.initiative_metrics IS 'Links between initiatives and the metrics they aim to improve';
+
+
+CREATE TABLE esg.initiative_metrics (
+    initiative_metric_id SERIAL PRIMARY KEY,
+    initiative_id INTEGER REFERENCES esg.initiatives(initiative_id),
+    metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    target_improvement DECIMAL(15,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_initiative_metric UNIQUE (initiative_id, metric_id)
+);
+
+COMMENT ON TABLE esg.initiative_metrics IS 'Links between initiatives and the metrics they aim to improve';
+
+
+CREATE TABLE esg.suppliers (
+    supplier_id SERIAL PRIMARY KEY,
+    supplier_name VARCHAR(200) NOT NULL,
+    industry_sector VARCHAR(100),
+    country_code VARCHAR(2),
+    esg_rating VARCHAR(10),
+    last_assessment_date DATE,
+    risk_level VARCHAR(20) CHECK (risk_level IN ('Low', 'Medium', 'High')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.suppliers IS 'Third-party suppliers with ESG information';
+
+
+CREATE TABLE esg.supplier_assessments (
+    assessment_id SERIAL PRIMARY KEY,
+    supplier_id INTEGER REFERENCES esg.suppliers(supplier_id),
+    assessment_date DATE NOT NULL,
+    assessment_type VARCHAR(100) NOT NULL,
+    overall_score DECIMAL(5,2) CHECK (overall_score BETWEEN 0 AND 100),
+    labor_practices_score DECIMAL(5,2),
+    environmental_score DECIMAL(5,2),
+    ethics_score DECIMAL(5,2),
+    notes TEXT,
+    next_assessment_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.supplier_assessments IS 'Detailed ESG assessments of suppliers';
+
+
+CREATE TABLE esg.regulatory_requirements (
+    regulation_id SERIAL PRIMARY KEY,
+    regulation_name VARCHAR(200) NOT NULL,
+    jurisdiction VARCHAR(100) NOT NULL,
+    effective_date DATE,
+    description TEXT,
+    compliance_deadline DATE,
+    reporting_requirements TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.regulatory_requirements IS 'ESG-related regulations and compliance requirements';
+
+
+CREATE TABLE esg.compliance_status (
+    compliance_id SERIAL PRIMARY KEY,
+    regulation_id INTEGER REFERENCES esg.regulatory_requirements(regulation_id),
+    status VARCHAR(20) CHECK (status IN ('Not Started', 'In Progress', 'Compliant', 'Non-Compliant')),
+    compliance_date DATE,
+    evidence TEXT,
+    notes TEXT,
+    next_review_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_regulation_status UNIQUE (regulation_id)
+);
+
+COMMENT ON TABLE esg.compliance_status IS 'Current compliance status for each regulation';
+
+
+CREATE TABLE esg.resilience_metrics (
+    resilience_id SERIAL PRIMARY KEY,
+    metric_name VARCHAR(200) NOT NULL,
+    description TEXT,
+    category_id INTEGER REFERENCES esg.risk_categories(category_id),
+    target_value DECIMAL(15,2),
+    measurement_frequency VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.resilience_metrics IS 'Metrics for assessing organizational resilience to ESG risks';
+
+CREATE TABLE esg.resilience_data (
+    data_id SERIAL PRIMARY KEY,
+    resilience_id INTEGER REFERENCES esg.resilience_metrics(resilience_id),
+    measurement_date DATE NOT NULL,
+    actual_value DECIMAL(15,2) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_resilience_measurement UNIQUE (resilience_id, measurement_date)
+);
+
+COMMENT ON TABLE esg.resilience_data IS 'Actual measurements of resilience metrics';
+
+
+--ESG Risk dashboard view
+CREATE OR REPLACE VIEW esg.vw_risk_dashboard AS
+SELECT
+    r.risk_id,
+    rc.category_name,
+    r.risk_name,
+    r.materiality_level,
+    r.risk_exposure_score,
+    ra.likelihood_score,
+    ra.impact_score,
+    ra.overall_score,
+    ra.status,
+    ra.next_review_date
+FROM
+    esg.risks r
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+LEFT JOIN
+    (SELECT risk_id, likelihood_score, impact_score, overall_score, status, next_review_date
+     FROM esg.risk_assessments
+     WHERE assessment_date = (SELECT MAX(assessment_date)
+                             FROM esg.risk_assessments ra2
+                             WHERE ra2.risk_id = esg.risk_assessments.risk_id)) ra
+    ON r.risk_id = ra.risk_id;
+
+COMMENT ON VIEW esg.vw_risk_dashboard IS 'Provides a comprehensive view of all ESG risks with their latest assessment scores';
+
+
+--ESG Performance Tracking view
+CREATE OR REPLACE VIEW esg.vw_performance_tracking AS
+SELECT
+    pm.metric_id,
+    pm.metric_name,
+    rc.category_name,
+    pm.unit_of_measure,
+    pm.target_value,
+    pm.benchmark_value,
+    pd.reporting_period,
+    pd.actual_value,
+    ((pd.actual_value - LAG(pd.actual_value) OVER (PARTITION BY pm.metric_id ORDER BY pd.reporting_period)) /
+     NULLIF(LAG(pd.actual_value) OVER (PARTITION BY pm.metric_id ORDER BY pd.reporting_period), 0)) * 100 AS yoy_change_percent,
+    CASE
+        WHEN pm.target_value IS NOT NULL THEN
+            CASE
+                WHEN pd.actual_value >= pm.target_value THEN 'Met'
+                ELSE 'Not Met'
+            END
+        ELSE NULL
+    END AS target_status
+FROM
+    esg.performance_metrics pm
+JOIN
+    esg.risk_categories rc ON pm.category_id = rc.category_id
+JOIN
+    esg.performance_data pd ON pm.metric_id = pd.metric_id
+WHERE
+    pd.reporting_period >= (CURRENT_DATE - INTERVAL '2 years');
+
+COMMENT ON VIEW esg.vw_performance_tracking IS 'Tracks performance metrics against targets with year-over-year comparison';
+
+
+--stakeholder engagement summary view
+CREATE OR REPLACE VIEW esg.vw_stakeholder_engagement_summary AS
+SELECT
+    s.stakeholder_id,
+    s.stakeholder_name,
+    s.stakeholder_type,
+    s.engagement_level,
+    COUNT(e.engagement_id) AS total_engagements,
+    AVG(e.satisfaction_score) AS avg_satisfaction_score,
+    MAX(e.engagement_date) AS last_engagement_date,
+    SUM(CASE WHEN e.follow_up_required THEN 1 ELSE 0 END) AS pending_follow_ups
+FROM
+    esg.stakeholders s
+LEFT JOIN
+    esg.stakeholder_engagement e ON s.stakeholder_id = e.stakeholder_id
+GROUP BY
+    s.stakeholder_id, s.stakeholder_name, s.stakeholder_type, s.engagement_level;
+
+COMMENT ON VIEW esg.vw_stakeholder_engagement_summary IS 'Summarizes engagement activities and satisfaction by stakeholder';
+
+--supplier esg risk view
+CREATE OR REPLACE VIEW esg.vw_supplier_esg_risk AS
+SELECT
+    s.supplier_id,
+    s.supplier_name,
+    s.industry_sector,
+    s.country_code,
+    s.esg_rating,
+    s.risk_level,
+    sa.assessment_date AS last_assessment_date,
+    sa.overall_score,
+    sa.labor_practices_score,
+    sa.environmental_score,
+    sa.ethics_score,
+    CASE
+        WHEN sa.overall_score >= 80 THEN 'Low Risk'
+        WHEN sa.overall_score >= 50 THEN 'Medium Risk'
+        ELSE 'High Risk'
+    END AS risk_category
+FROM
+    esg.suppliers s
+LEFT JOIN
+    (SELECT supplier_id, assessment_date, overall_score, labor_practices_score, environmental_score, ethics_score
+     FROM esg.supplier_assessments
+     WHERE assessment_date = (SELECT MAX(assessment_date)
+                             FROM esg.supplier_assessments sa2
+                             WHERE sa2.supplier_id = esg.supplier_assessments.supplier_id)) sa
+    ON s.supplier_id = sa.supplier_id;
+
+COMMENT ON VIEW esg.vw_supplier_esg_risk IS 'Provides a risk assessment of suppliers based on ESG factors';
+
+-- ESG regualatory compliance status view
+CREATE OR REPLACE VIEW esg.vw_regulatory_compliance AS
+SELECT
+    rr.regulation_id,
+    rr.regulation_name,
+    rr.jurisdiction,
+    rr.effective_date,
+    rr.compliance_deadline,
+    cs.status,
+    cs.compliance_date,
+    CASE
+        WHEN cs.status = 'Compliant' THEN 'Compliant'
+        WHEN cs.status = 'Non-Compliant' THEN 'Non-Compliant'
+        WHEN CURRENT_DATE > rr.compliance_deadline THEN 'Overdue'
+        ELSE 'Pending'
+    END AS compliance_status,
+    CASE
+        WHEN cs.status = 'Compliant' THEN NULL
+        WHEN cs.status = 'Non-Compliant' THEN NULL
+        ELSE AGE(rr.compliance_deadline, CURRENT_DATE)
+    END AS days_remaining
+FROM
+    esg.regulatory_requirements rr
+LEFT JOIN
+    esg.compliance_status cs ON rr.regulation_id = cs.regulation_id;
+
+COMMENT ON VIEW esg.vw_regulatory_compliance IS 'Shows compliance status for all ESG-related regulations';
+
+--materialized view for high-risk ESG items
+CREATE MATERIALIZED VIEW esg.mv_high_risk_items AS
+SELECT
+    r.risk_id,
+    rc.category_name,
+    r.risk_name,
+    ra.likelihood_score,
+    ra.impact_score,
+    ra.overall_score,
+    ra.assessment_date,
+    ra.next_review_date
+FROM
+    esg.risks r
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+JOIN
+    esg.risk_assessments ra ON r.risk_id = ra.risk_id
+WHERE
+    ra.overall_score >= 12  -- High risk threshold (likelihood 3 * impact 4)
+    AND ra.assessment_date = (SELECT MAX(assessment_date)
+                             FROM esg.risk_assessments ra2
+                             WHERE ra2.risk_id = ra.risk_id)
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_high_risk_items IS 'Pre-aggregated view of high-risk ESG items for quick reference';
+
+--materialized view for ESG performacne trends
+CREATE MATERIALIZED VIEW esg.mv_performance_trends AS
+SELECT
+    pm.metric_id,
+    pm.metric_name,
+    rc.category_name,
+    DATE_TRUNC('quarter', pd.reporting_period) AS quarter,
+    AVG(pd.actual_value) AS avg_value,
+    MIN(pd.actual_value) AS min_value,
+    MAX(pd.actual_value) AS max_value,
+    pm.target_value,
+    pm.benchmark_value
+FROM
+    esg.performance_metrics pm
+JOIN
+    esg.risk_categories rc ON pm.category_id = rc.category_id
+JOIN
+    esg.performance_data pd ON pm.metric_id = pd.metric_id
+WHERE
+    pd.reporting_period >= (CURRENT_DATE - INTERVAL '3 years')
+GROUP BY
+    pm.metric_id, pm.metric_name, rc.category_name, DATE_TRUNC('quarter', pd.reporting_period), pm.target_value, pm.benchmark_value
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_performance_trends IS 'Quarterly aggregated performance metrics for trend analysis';
+
+-- stored procedures to add new ESG Risk Assessment
+CREATE OR REPLACE PROCEDURE esg.sp_add_risk_assessment(
+    p_risk_id INTEGER,
+    p_assessed_by VARCHAR(100),
+    p_likelihood_score INTEGER,
+    p_impact_score INTEGER,
+    p_assessment_notes TEXT,
+    p_next_review_date DATE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Validate scores
+    IF p_likelihood_score < 1 OR p_likelihood_score > 5 THEN
+        RAISE EXCEPTION 'Likelihood score must be between 1 and 5';
+    END IF;
+
+    IF p_impact_score < 1 OR p_impact_score > 5 THEN
+        RAISE EXCEPTION 'Impact score must be between 1 and 5';
+    END IF;
+
+    -- Insert new assessment
+    INSERT INTO esg.risk_assessments (
+        risk_id,
+        assessment_date,
+        assessed_by,
+        likelihood_score,
+        impact_score,
+        assessment_notes,
+        next_review_date,
+        status
+    ) VALUES (
+        p_risk_id,
+        CURRENT_DATE,
+        p_assessed_by,
+        p_likelihood_score,
+        p_impact_score,
+        p_assessment_notes,
+        p_next_review_date,
+        'Open'
+    );
+
+    -- Update risk exposure score in risks table based on new assessment
+    UPDATE esg.risks
+    SET risk_exposure_score = CASE
+                                WHEN (p_likelihood_score * p_impact_score) >= 16 THEN 10
+                                WHEN (p_likelihood_score * p_impact_score) >= 12 THEN 8
+                                WHEN (p_likelihood_score * p_impact_score) >= 8 THEN 6
+                                WHEN (p_likelihood_score * p_impact_score) >= 4 THEN 4
+                                ELSE 2
+                              END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE risk_id = p_risk_id;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_add_risk_assessment IS 'Adds a new risk assessment and updates the risk exposure score';
+
+-- procedure to update ESG performance data
+CREATE OR REPLACE PROCEDURE esg.sp_update_performance_data(
+    p_metric_id INTEGER,
+    p_reporting_period DATE,
+    p_actual_value DECIMAL(15,2),
+    p_data_source VARCHAR(200),
+    p_notes TEXT,
+    p_verification_status VARCHAR(20)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Validate verification status
+    IF p_verification_status NOT IN ('Unverified', 'In Review', 'Verified') THEN
+        RAISE EXCEPTION 'Invalid verification status';
+    END IF;
+
+    -- Check if record exists
+    IF EXISTS (SELECT 1 FROM esg.performance_data
+               WHERE metric_id = p_metric_id AND reporting_period = p_reporting_period) THEN
+        -- Update existing record
+        UPDATE esg.performance_data
+        SET
+            actual_value = p_actual_value,
+            data_source = p_data_source,
+            notes = p_notes,
+            verification_status = p_verification_status,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            metric_id = p_metric_id AND reporting_period = p_reporting_period;
+    ELSE
+        -- Insert new record
+        INSERT INTO esg.performance_data (
+            metric_id,
+            reporting_period,
+            actual_value,
+            data_source,
+            notes,
+            verification_status
+        ) VALUES (
+            p_metric_id,
+            p_reporting_period,
+            p_actual_value,
+            p_data_source,
+            p_notes,
+            p_verification_status
+        );
+    END IF;
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_update_performance_data IS 'Updates or inserts performance data for a specific metric and period';
+
+
+-- procedure to generate ESG report
+CREATE OR REPLACE PROCEDURE esg.sp_generate_esg_report(
+    p_report_year INTEGER,
+    p_report_type VARCHAR(50),
+    OUT p_report_html TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_report_start DATE;
+    v_report_end DATE;
+    v_summary_html TEXT := '';
+    v_performance_html TEXT := '';
+    v_risk_html TEXT := '';
+    v_compliance_html TEXT := '';
+BEGIN
+    -- Set report date range
+    v_report_start := TO_DATE(p_report_year || '-01-01', 'YYYY-MM-DD');
+    v_report_end := TO_DATE(p_report_year || '-12-31', 'YYYY-MM-DD');
+
+    -- Build summary section
+    SELECT
+        '<h2>ESG Performance Summary</h2>' ||
+        '<p><strong>Year:</strong> ' || p_report_year || '</p>' ||
+        '<p><strong>Report Generated:</strong> ' || CURRENT_DATE || '</p>' ||
+        '<p><strong>Total Risks Tracked:</strong> ' || COUNT(*) || '</p>' ||
+        '<p><strong>High Risks:</strong> ' || SUM(CASE WHEN overall_score >= 12 THEN 1 ELSE 0 END) || '</p>' ||
+        '<p><strong>Medium Risks:</strong> ' || SUM(CASE WHEN overall_score BETWEEN 8 AND 11 THEN 1 ELSE 0 END) || '</p>' ||
+        '<p><strong>Low Risks:</strong> ' || SUM(CASE WHEN overall_score < 8 THEN 1 ELSE 0 END) || '</p>'
+    INTO v_summary_html
+    FROM esg.vw_risk_dashboard;
+
+    -- Build performance section
+    SELECT
+        '<h2>Key Performance Indicators</h2>' ||
+        STRING_AGG(
+            '<div class="kpi">' ||
+            '<h3>' || metric_name || '</h3>' ||
+            '<p>Category: ' || category_name || '</p>' ||
+            '<p>Target: ' || COALESCE(target_value::TEXT, 'N/A') || ' ' || COALESCE(unit_of_measure, '') || '</p>' ||
+            '<p>Actual: ' || actual_value || ' ' || COALESCE(unit_of_measure, '') || '</p>' ||
+            '<p>Status: ' || target_status || '</p>' ||
+            '</div>',
+            ''
+        )
+    INTO v_performance_html
+    FROM esg.vw_performance_tracking
+    WHERE EXTRACT(YEAR FROM reporting_period) = p_report_year;
+
+    -- Build risk section
+    SELECT
+        '<h2>Top ESG Risks</h2>' ||
+        '<table border="1">' ||
+        '<tr><th>Category</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Score</th><th>Status</th></tr>' ||
+        STRING_AGG(
+            '<tr>' ||
+            '<td>' || category_name || '</td>' ||
+            '<td>' || risk_name || '</td>' ||
+            '<td>' || likelihood_score || '</td>' ||
+            '<td>' || impact_score || '</td>' ||
+            '<td>' || overall_score || '</td>' ||
+            '<td>' || status || '</td>' ||
+            '</tr>',
+            ''
+        ) ||
+        '</table>'
+    INTO v_risk_html
+    FROM esg.vw_risk_dashboard
+    WHERE overall_score >= 8  -- Medium and high risks
+    ORDER BY overall_score DESC
+    LIMIT 10;
+
+    -- Build compliance section
+    SELECT
+        '<h2>Regulatory Compliance</h2>' ||
+        '<table border="1">' ||
+        '<tr><th>Regulation</th><th>Jurisdiction</th><th>Status</th><th>Deadline</th></tr>' ||
+        STRING_AGG(
+            '<tr>' ||
+            '<td>' || regulation_name || '</td>' ||
+            '<td>' || jurisdiction || '</td>' ||
+            '<td>' || compliance_status || '</td>' ||
+            '<td>' || compliance_deadline || '</td>' ||
+            '</tr>',
+            ''
+        ) ||
+        '</table>'
+    INTO v_compliance_html
+    FROM esg.vw_regulatory_compliance;
+
+    -- Combine all sections
+    p_report_html :=
+        '<!DOCTYPE html>' ||
+        '<html>' ||
+        '<head><title>ESG Report ' || p_report_year || '</title></head>' ||
+        '<body>' ||
+        '<h1>ESG Annual Report - ' || p_report_year || '</h1>' ||
+        v_summary_html ||
+        v_performance_html ||
+        v_risk_html ||
+        v_compliance_html ||
+        '</body>' ||
+        '</html>';
+
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_generate_esg_report IS 'Generates an HTML ESG report for the specified year';
+
+
+-- procedure to refresh materialized views
+CREATE OR REPLACE PROCEDURE esg.sp_refresh_materialized_views()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW esg.mv_high_risk_items;
+    REFRESH MATERIALIZED VIEW esg.mv_performance_trends;
+    COMMIT;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_refresh_materialized_views IS 'Refreshes all materialized views in the ESG schema';
+
+-- Indexes for performance optimization
+CREATE INDEX idx_risks_category ON esg.risks(category_id);
+CREATE INDEX idx_risk_assessments_risk ON esg.risk_assessments(risk_id);
+CREATE INDEX idx_risk_assessments_date ON esg.risk_assessments(assessment_date);
+CREATE INDEX idx_performance_data_metric ON esg.performance_data(metric_id);
+CREATE INDEX idx_performance_data_period ON esg.performance_data(reporting_period);
+CREATE INDEX idx_stakeholder_engagement_stakeholder ON esg.stakeholder_engagement(stakeholder_id);
+CREATE INDEX idx_supplier_assessments_supplier ON esg.supplier_assessments(supplier_id);
+CREATE INDEX idx_compliance_status_regulation ON esg.compliance_status(regulation_id);
+CREATE INDEX idx_resilience_data_metric ON esg.resilience_data(resilience_id);
+
+
+---examples
+-- adding a new risk assessment
+CALL esg.sp_add_risk_assessment(
+    p_risk_id := 5,
+    p_assessed_by := 'John Smith',
+    p_likelihood_score := 4,
+    p_impact_score := 3,
+    p_assessment_notes := 'Risk has increased due to new regulations',
+    p_next_review_date := '2025-05-31'
+);
+--updating performance data
+CALL esg.sp_update_performance_data(
+    p_metric_id := 10,
+    p_reporting_period := '2025-05-31',
+    p_actual_value := 85.5,
+    p_data_source := 'Internal Sustainability Report',
+    p_notes := 'Improved due to new efficiency measures',
+    p_verification_status := 'Verified'
+);
+
+--generating ESG report
+DO $$
+DECLARE
+    v_report_html TEXT;
+BEGIN
+    CALL esg.sp_generate_esg_report(
+        p_report_year := 2024,
+        p_report_type := 'Annual',
+        p_report_html := v_report_html
+    );
+
+    -- Save the report to a file or display it
+    RAISE NOTICE 'Report generated: %', LEFT(v_report_html, 100) || '...';
+END;
+$$;
+
+
+--querying high-risk items
+SELECT * FROM esg.mv_high_risk_items
+ORDER BY overall_score DESC;
+
+--checking regulatory compliance status
+SELECT * FROM esg.vw_regulatory_compliance
+WHERE compliance_status != 'Compliant'
+ORDER BY days_remaining;
+
+
+---Climate Scenario Analysis
+--Business Case: Organizations need to assess climate-related risks under different warming scenarios (1.5°C, 2°C, 3°C) to comply with TCFD recommendations and prepare transition plans.
+CREATE TABLE esg.climate_scenarios (
+    scenario_id SERIAL PRIMARY KEY,
+    scenario_name VARCHAR(100) NOT NULL,
+    warming_level DECIMAL(3,1) NOT NULL, -- Degrees Celsius
+    time_horizon INTEGER NOT NULL, -- Year
+    description TEXT,
+    source VARCHAR(200),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.climate_scenario_impacts (
+    impact_id SERIAL PRIMARY KEY,
+    scenario_id INTEGER REFERENCES esg.climate_scenarios(scenario_id),
+    risk_id INTEGER REFERENCES esg.risks(risk_id),
+    impact_description TEXT NOT NULL,
+    financial_impact DECIMAL(15,2), -- Monetary value
+    operational_impact VARCHAR(100), -- High/Medium/Low
+    probability DECIMAL(5,2) CHECK (probability BETWEEN 0 AND 1),
+    adaptation_strategy TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.climate_scenarios IS 'Stores different climate change scenarios for risk assessment';
+COMMENT ON TABLE esg.climate_scenario_impacts IS 'Links climate scenarios to specific risks and quantifies potential impacts';
+
+--ESG incident tracking
+-- Business Case: Companies must systematically track ESG-related incidents (spills, labor violations, governance failures) for regulatory reporting, remediation, and trend analysis.
+
+CREATE TABLE esg.incidents (
+    incident_id SERIAL PRIMARY KEY,
+    incident_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    discovery_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    risk_id INTEGER REFERENCES esg.risks(risk_id),
+    category_id INTEGER REFERENCES esg.risk_categories(category_id),
+    severity VARCHAR(20) CHECK (severity IN ('Minor', 'Moderate', 'Major', 'Critical')),
+    description TEXT NOT NULL,
+    location VARCHAR(200),
+    root_cause TEXT,
+    status VARCHAR(20) CHECK (status IN ('Open', 'Investigating', 'Remediating', 'Closed', 'Litigation')),
+    reporter VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.incident_remediation (
+    remediation_id SERIAL PRIMARY KEY,
+    incident_id INTEGER REFERENCES esg.incidents(incident_id),
+    action_description TEXT NOT NULL,
+    responsible_party VARCHAR(100) NOT NULL,
+    due_date DATE,
+    completion_date DATE,
+    cost DECIMAL(15,2),
+    effectiveness_rating INTEGER CHECK (effectiveness_rating BETWEEN 1 AND 5),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.incidents IS 'Tracks ESG-related incidents with full lifecycle management';
+COMMENT ON TABLE esg.incident_remediation IS 'Records corrective actions taken to address ESG incidents';
+
+--ESG Target Setting and Tracking
+-- Business Case: Companies set science-based targets (SBTi) and need to track progress against commitments like net-zero, DEI goals, and governance improvements.
+CREATE TABLE esg.targets (
+    target_id SERIAL PRIMARY KEY,
+    target_name VARCHAR(200) NOT NULL,
+    metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    target_type VARCHAR(50) CHECK (target_type IN ('Absolute', 'Intensity', 'Binary')),
+    baseline_value DECIMAL(15,2),
+    baseline_year INTEGER,
+    target_value DECIMAL(15,2) NOT NULL,
+    target_year INTEGER NOT NULL,
+    science_based BOOLEAN DEFAULT FALSE,
+    approved_by VARCHAR(100), -- e.g., "SBTi"
+    commitment_public BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.target_progress (
+    progress_id SERIAL PRIMARY KEY,
+    target_id INTEGER REFERENCES esg.targets(target_id),
+    reporting_date DATE NOT NULL,
+    current_value DECIMAL(15,2) NOT NULL,
+    on_track_status VARCHAR(20) CHECK (on_track_status IN ('On Track', 'Off Track', 'At Risk')),
+    comments TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_target_reporting UNIQUE (target_id, reporting_date)
+);
+
+COMMENT ON TABLE esg.targets IS 'Stores ESG targets including science-based climate targets';
+COMMENT ON TABLE esg.target_progress IS 'Tracks progress against ESG targets over time';
+
+--ESG Audit Framework
+-- Business Case: Independent verification of ESG performance and controls is critical for investor confidence and regulatory compliance.
+CREATE TABLE esg.audit_programs (
+    program_id SERIAL PRIMARY KEY,
+    program_name VARCHAR(200) NOT NULL,
+    audit_standard VARCHAR(100) NOT NULL, -- e.g., "AA1000", "ISO 14001"
+    scope TEXT NOT NULL,
+    frequency VARCHAR(50) NOT NULL,
+    responsible_party VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.audits (
+    audit_id SERIAL PRIMARY KEY,
+    program_id INTEGER REFERENCES esg.audit_programs(program_id),
+    audit_date DATE NOT NULL,
+    lead_auditor VARCHAR(100) NOT NULL,
+    status VARCHAR(20) CHECK (status IN ('Planned', 'In Progress', 'Completed', 'Closed')),
+    conclusion VARCHAR(20) CHECK (conclusion IN ('Satisfactory', 'Minor Findings', 'Major Findings', 'Unsatisfactory')),
+    report_location VARCHAR(200),
+    next_audit_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.audit_findings (
+    finding_id SERIAL PRIMARY KEY,
+    audit_id INTEGER REFERENCES esg.audits(audit_id),
+    risk_id INTEGER REFERENCES esg.risks(risk_id),
+    finding_description TEXT NOT NULL,
+    severity VARCHAR(20) CHECK (severity IN ('Minor', 'Moderate', 'Major', 'Critical')),
+    root_cause TEXT,
+    recommendation TEXT,
+    due_date DATE,
+    status VARCHAR(20) CHECK (status IN ('Open', 'In Progress', 'Resolved', 'Verified')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.audit_programs IS 'Defines ESG audit programs and standards';
+COMMENT ON TABLE esg.audits IS 'Records individual audit instances and outcomes';
+COMMENT ON TABLE esg.audit_findings IS 'Tracks specific findings from ESG audits with remediation tracking';
+
+
+-- Climate Risk Exposure view
+--Business Case: Executives need a consolidated view of physical and transition risks across different climate scenarios.
+CREATE OR REPLACE VIEW esg.vw_climate_risk_exposure AS
+SELECT
+    r.risk_id,
+    r.risk_name,
+    rc.category_name,
+    cs.scenario_name,
+    cs.warming_level,
+    cs.time_horizon,
+    csi.financial_impact,
+    csi.operational_impact,
+    csi.probability,
+    csi.adaptation_strategy,
+    ra.overall_score AS current_risk_score
+FROM
+    esg.risks r
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+JOIN
+    esg.climate_scenario_impacts csi ON r.risk_id = csi.risk_id
+JOIN
+    esg.climate_scenarios cs ON csi.scenario_id = cs.scenario_id
+LEFT JOIN
+    (SELECT risk_id, overall_score
+     FROM esg.risk_assessments
+     WHERE assessment_date = (SELECT MAX(assessment_date) FROM esg.risk_assessments ra2 WHERE ra2.risk_id = esg.risk_assessments.risk_id)) ra
+    ON r.risk_id = ra.risk_id
+WHERE
+    rc.category_type = 'Environmental';
+
+COMMENT ON VIEW esg.vw_climate_risk_exposure IS 'Provides climate scenario analysis showing how risks evolve under different warming scenarios';
+
+--ESG Incident Trend Analysis View
+
+--Business Case: Risk managers need to identify patterns in ESG incidents to prioritize preventive measures.
+CREATE OR REPLACE VIEW esg.vw_incident_trends AS
+SELECT
+    rc.category_name,
+    DATE_TRUNC('quarter', i.incident_date) AS quarter,
+    COUNT(*) AS incident_count,
+    SUM(CASE WHEN severity = 'Critical' THEN 1 ELSE 0 END) AS critical_count,
+    SUM(CASE WHEN severity = 'Major' THEN 1 ELSE 0 END) AS major_count,
+    AVG(EXTRACT(EPOCH FROM (i.discovery_date - i.incident_date))/86400 AS avg_days_to_detect,
+    AVG(EXTRACT(EPOCH FROM (r.completion_date - i.incident_date))/86400 AS avg_days_to_remediate
+FROM
+    esg.incidents i
+JOIN
+    esg.risk_categories rc ON i.category_id = rc.category_id
+LEFT JOIN
+    (SELECT incident_id, MAX(completion_date) AS completion_date
+     FROM esg.incident_remediation
+     WHERE completion_date IS NOT NULL
+     GROUP BY incident_id) r ON i.incident_id = r.incident_id
+WHERE
+    i.incident_date >= CURRENT_DATE - INTERVAL '2 years'
+GROUP BY
+    rc.category_name, DATE_TRUNC('quarter', i.incident_date)
+ORDER BY
+    rc.category_name, quarter;
+
+COMMENT ON VIEW esg.vw_incident_trends IS 'Analyzes ESG incident trends by category with detection and remediation metrics';
+
+
+--ESG Target Performance View
+--Business Case: Sustainability teams need to monitor progress against all ESG targets in one place with visual indicators.
+CREATE OR REPLACE VIEW esg.vw_target_performance AS
+SELECT
+    t.target_id,
+    t.target_name,
+    pm.metric_name,
+    pm.unit_of_measure,
+    t.target_type,
+    t.baseline_value,
+    t.baseline_year,
+    t.target_value,
+    t.target_year,
+    tp.reporting_date,
+    tp.current_value,
+    CASE
+        WHEN t.target_type = 'Binary' THEN
+            CASE WHEN tp.current_value >= t.target_value THEN 'Achieved' ELSE 'Not Achieved' END
+        ELSE
+            ROUND(((tp.current_value - t.baseline_value) / NULLIF((t.target_value - t.baseline_value), 0) * 100, 1) || '%'
+    END AS progress_percentage,
+    tp.on_track_status,
+    t.science_based,
+    t.commitment_public
+FROM
+    esg.targets t
+JOIN
+    esg.performance_metrics pm ON t.metric_id = pm.metric_id
+JOIN
+    (SELECT target_id, reporting_date, current_value, on_track_status
+     FROM esg.target_progress
+     WHERE reporting_date = (SELECT MAX(reporting_date) FROM esg.target_progress tp2 WHERE tp2.target_id = esg.target_progress.target_id)) tp
+    ON t.target_id = tp.target_id;
+
+COMMENT ON VIEW esg.vw_target_performance IS 'Shows current status of all ESG targets with progress calculations';
+
+
+-- ESG Risk Heatmap Materialized View
+--Business Case: The board requires a pre-aggregated risk matrix showing likelihood vs impact for all material ESG risks.
+CREATE MATERIALIZED VIEW esg.mv_risk_heatmap AS
+SELECT
+    rc.category_name,
+    ra.likelihood_score,
+    ra.impact_score,
+    COUNT(*) AS risk_count,
+    STRING_AGG(r.risk_name, '; ' ORDER BY r.risk_name) AS risk_names
+FROM
+    esg.risks r
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+JOIN
+    (SELECT risk_id, likelihood_score, impact_score
+     FROM esg.risk_assessments
+     WHERE assessment_date = (SELECT MAX(assessment_date) FROM esg.risk_assessments ra2 WHERE ra2.risk_id = esg.risk_assessments.risk_id)) ra
+    ON r.risk_id = ra.risk_id
+WHERE
+    r.materiality_level IN ('High', 'Medium')
+GROUP BY
+    rc.category_name, ra.likelihood_score, ra.impact_score
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_risk_heatmap IS 'Pre-aggregated risk matrix for heatmap visualization by category';
+
+
+--ESG Audit Findings Summary Materialized View
+-- Business Case: Internal audit needs quick access to open findings by risk category to prioritize remediation.
+CREATE MATERIALIZED VIEW esg.mv_audit_findings_summary AS
+SELECT
+    rc.category_name,
+    af.severity,
+    a.audit_date,
+    COUNT(*) AS finding_count,
+    SUM(CASE WHEN af.status != 'Resolved' THEN 1 ELSE 0 END) AS open_finding_count,
+    MIN(af.due_date) AS earliest_due_date,
+    STRING_AGG(DISTINCT ap.program_name, ', ') AS audit_programs
+FROM
+    esg.audit_findings af
+JOIN
+    esg.audits a ON af.audit_id = a.audit_id
+JOIN
+    esg.audit_programs ap ON a.program_id = ap.program_id
+JOIN
+    esg.risks r ON af.risk_id = r.risk_id
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+WHERE
+    af.status != 'Resolved'
+GROUP BY
+    rc.category_name, af.severity, a.audit_date
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_audit_findings_summary IS 'Summarizes open audit findings by category and severity for remediation tracking';
+
+-- ESG Risk Simulation procedure
+--Business Case: Risk managers need to model how risk scores would change under different mitigation scenarios.
+
+CREATE OR REPLACE PROCEDURE esg.sp_simulate_risk_impact(
+    p_risk_id INTEGER,
+    p_new_likelihood INTEGER,
+    p_new_impact INTEGER,
+    p_mitigation_cost DECIMAL(15,2),
+    OUT p_current_score INTEGER,
+    OUT p_proposed_score INTEGER,
+    OUT p_risk_reduction INTEGER,
+    OUT p_cost_per_risk_point DECIMAL(15,2)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_current_ra RECORD;
+BEGIN
+    -- Get current risk assessment
+    SELECT likelihood_score, impact_score, overall_score
+    INTO v_current_ra
+    FROM esg.risk_assessments
+    WHERE risk_id = p_risk_id
+    ORDER BY assessment_date DESC
+    LIMIT 1;
+
+    -- Validate inputs
+    IF v_current_ra IS NULL THEN
+        RAISE EXCEPTION 'No current assessment found for risk ID %', p_risk_id;
+    END IF;
+
+    IF p_new_likelihood < 1 OR p_new_likelihood > 5 THEN
+        RAISE EXCEPTION 'Likelihood score must be between 1 and 5';
+    END IF;
+
+    IF p_new_impact < 1 OR p_new_impact > 5 THEN
+        RAISE EXCEPTION 'Impact score must be between 1 and 5';
+    END IF;
+
+    -- Calculate outputs
+    p_current_score := v_current_ra.overall_score;
+    p_proposed_score := p_new_likelihood * p_new_impact;
+    p_risk_reduction := p_current_score - p_proposed_score;
+
+    IF p_risk_reduction > 0 THEN
+        p_cost_per_risk_point := p_mitigation_cost / p_risk_reduction;
+    ELSE
+        p_cost_per_risk_point := NULL;
+    END IF;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_simulate_risk_impact IS 'Simulates the effect of risk mitigation measures by calculating potential score improvements and cost per risk point reduced';
+
+--ESG Data Quality Procedure Checks
+--Business Case: Before ESG reporting, teams need to validate data completeness and accuracy across all metrics.
+CREATE OR REPLACE PROCEDURE esg.sp_validate_esg_data(
+    p_reporting_period DATE,
+    OUT p_total_metrics INTEGER,
+    OUT p_missing_data INTEGER,
+    OUT p_unverified_data INTEGER,
+    OUT p_completeness_percent DECIMAL(5,2),
+    OUT p_accuracy_issues TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Count total metrics
+    SELECT COUNT(*) INTO p_total_metrics
+    FROM esg.performance_metrics
+    WHERE reporting_frequency IS NOT NULL;
+
+    -- Count metrics missing data for the period
+    SELECT COUNT(*) INTO p_missing_data
+    FROM esg.performance_metrics pm
+    WHERE pm.reporting_frequency IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1 FROM esg.performance_data pd
+        WHERE pd.metric_id = pm.metric_id
+        AND pd.reporting_period = p_reporting_period
+    );
+
+    -- Count unverified data points
+    SELECT COUNT(*) INTO p_unverified_data
+    FROM esg.performance_data
+    WHERE reporting_period = p_reporting_period
+    AND verification_status != 'Verified';
+
+    -- Calculate completeness percentage
+    p_completeness_percent := ((p_total_metrics - p_missing_data) * 100.0) / NULLIF(p_total_metrics, 0);
+
+    -- Identify accuracy issues
+    SELECT STRING_AGG(pm.metric_name, ', ' ORDER BY pm.metric_name) INTO p_accuracy_issues
+    FROM esg.performance_data pd
+    JOIN esg.performance_metrics pm ON pd.metric_id = pm.metric_id
+    WHERE pd.reporting_period = p_reporting_period
+    AND (
+        (pd.actual_value < 0 AND pm.metric_name NOT LIKE '%Reduction%') OR
+        (pd.actual_value > pm.target_value * 5 AND pm.target_value IS NOT NULL) OR
+        (pd.data_source IS NULL)
+    );
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_validate_esg_data IS 'Validates ESG data quality for a reporting period by checking completeness, verification status, and potential accuracy issues';
+
+--ESG Regulatory Change Impact Assessment
+--Business Case: Legal teams need to assess which risks and controls are affected by new ESG regulations.
+CREATE OR REPLACE PROCEDURE esg.sp_assess_regulatory_impact(
+    p_regulation_id INTEGER,
+    OUT p_affected_risks INTEGER,
+    OUT p_high_impact_risks INTEGER,
+    OUT p_existing_controls INTEGER,
+    OUT p_gap_analysis TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Count risks potentially affected by the regulation
+    SELECT COUNT(*) INTO p_affected_risks
+    FROM esg.risks r
+    JOIN esg.risk_categories rc ON r.category_id = rc.category_id
+    JOIN esg.regulatory_requirements rr ON
+        (rr.regulation_id = p_regulation_id AND
+         (rr.regulation_name ILIKE '%' || rc.category_name || '%' OR
+          rr.description ILIKE '%' || rc.category_name || '%'));
+
+    -- Count high materiality risks affected
+    SELECT COUNT(*) INTO p_high_impact_risks
+    FROM esg.risks r
+    JOIN esg.risk_categories rc ON r.category_id = rc.category_id
+    JOIN esg.regulatory_requirements rr ON
+        (rr.regulation_id = p_regulation_id AND
+         (rr.regulation_name ILIKE '%' || rc.category_name || '%' OR
+          rr.description ILIKE '%' || rc.category_name || '%'))
+    WHERE r.materiality_level = 'High';
+
+    -- Count existing controls mapped to affected risks
+    SELECT COUNT(DISTINCT r.risk_id) INTO p_existing_controls
+    FROM esg.risks r
+    JOIN esg.risk_categories rc ON r.category_id = rc.category_id
+    JOIN esg.regulatory_requirements rr ON
+        (rr.regulation_id = p_regulation_id AND
+         (rr.regulation_name ILIKE '%' || rc.category_name || '%' OR
+          rr.description ILIKE '%' || rc.category_name || '%'))
+    WHERE r.mitigation_strategy IS NOT NULL;
+
+    -- Generate gap analysis
+    SELECT STRING_AGG(
+        'Risk: ' || r.risk_name || ' | Current Control: ' ||
+        COALESCE(NULLIF(r.mitigation_strategy, ''), 'None') || ' | Regulation Requirement: ' ||
+        LEFT(rr.description, 100),
+        E'\n'
+    ) INTO p_gap_analysis
+    FROM esg.risks r
+    JOIN esg.risk_categories rc ON r.category_id = rc.category_id
+    JOIN esg.regulatory_requirements rr ON
+        (rr.regulation_id = p_regulation_id AND
+         (rr.regulation_name ILIKE '%' || rc.category_name || '%' OR
+          rr.description ILIKE '%' || rc.category_name || '%'))
+    WHERE r.mitigation_strategy IS NULL OR r.mitigation_strategy = '';
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_assess_regulatory_impact IS 'Assesses which risks and controls are affected by a new ESG regulation and identifies gaps';
+
+-- Indexes
+-- Indexes for new tables
+CREATE INDEX idx_climate_scenario_impacts_risk ON esg.climate_scenario_impacts(risk_id);
+CREATE INDEX idx_climate_scenario_impacts_scenario ON esg.climate_scenario_impacts(scenario_id);
+CREATE INDEX idx_incidents_risk ON esg.incidents(risk_id);
+CREATE INDEX idx_incidents_category ON esg.incidents(category_id);
+CREATE INDEX idx_incidents_date ON esg.incidents(incident_date);
+CREATE INDEX idx_incident_remediation_incident ON esg.incident_remediation(incident_id);
+CREATE INDEX idx_targets_metric ON esg.targets(metric_id);
+CREATE INDEX idx_target_progress_target ON esg.target_progress(target_id);
+CREATE INDEX idx_target_progress_date ON esg.target_progress(reporting_date);
+CREATE INDEX idx_audits_program ON esg.audits(program_id);
+CREATE INDEX idx_audit_findings_audit ON esg.audit_findings(audit_id);
+CREATE INDEX idx_audit_findings_risk ON esg.audit_findings(risk_id);
+CREATE INDEX idx_audit_findings_status ON esg.audit_findings(status);
+
+-- Functional indexes for text search
+CREATE INDEX idx_risks_name_search ON esg.risks USING gin (risk_name gin_trgm_ops);
+CREATE INDEX idx_regulations_name_search ON esg.regulatory_requirements USING gin (regulation_name gin_trgm_ops);
+
+--climate Scenario Analysis
+-- Analyze physical risk exposure under 2°C scenario
+SELECT * FROM esg.vw_climate_risk_exposure
+WHERE warming_level = 2.0 AND time_horizon = 2030
+ORDER BY financial_impact DESC NULLS LAST;
+
+--Incident Trend Monitoring
+-- Identify categories with worsening detection times
+SELECT * FROM esg.vw_incident_trends
+WHERE avg_days_to_detect > 30
+ORDER BY quarter, category_name;
+
+--Target Performance Review
+-- Check all off-track targets
+SELECT * FROM esg.vw_target_performance
+WHERE on_track_status != 'On Track' AND target_year >= EXTRACT(YEAR FROM CURRENT_DATE);
+
+
+
+-- Risk Simulation
+-- Evaluate a mitigation investment
+-- Evaluate a mitigation investment
+CALL esg.sp_simulate_risk_impact(
+    p_risk_id := 42,
+    p_new_likelihood := 2,
+    p_new_impact := 3,
+    p_mitigation_cost := 500000,
+    p_current_score := NULL,
+    p_proposed_score := NULL,
+    p_risk_reduction := NULL,
+    p_cost_per_risk_point := NULL
+);
+
+
+--regulatory impact assessment
+-- Assess new EU CSRD regulation impact
+DO $$
+DECLARE
+    v_reg_id INTEGER;
+    v_affected INTEGER;
+    v_high_risk INTEGER;
+    v_controls INTEGER;
+    v_gaps TEXT;
+BEGIN
+    SELECT regulation_id INTO v_reg_id
+    FROM esg.regulatory_requirements
+    WHERE regulation_name LIKE '%Corporate Sustainability Reporting Directive%';
+
+    CALL esg.sp_assess_regulatory_impact(
+        p_regulation_id := v_reg_id,
+        p_affected_risks := v_affected,
+        p_high_impact_risks := v_high_risk,
+        p_existing_controls := v_controls,
+        p_gap_analysis := v_gaps
+    );
+
+    RAISE NOTICE 'CSRD impacts % risks (% high), with % existing controls. Gaps: %',
+        v_affected, v_high_risk, v_controls, v_gaps;
+END;
+$$;
+
+
+-- ESG Capacity Planning Framework
+--
+-- Business Case: Organizations need to forecast resource requirements (people, budget, technology) for ESG initiatives and ensure adequate capacity for risk mitigation programs.
+
+CREATE TABLE esg.capacity_requirements (
+    requirement_id SERIAL PRIMARY KEY,
+    initiative_id INTEGER REFERENCES esg.initiatives(initiative_id),
+    resource_type VARCHAR(50) NOT NULL CHECK (resource_type IN ('Personnel', 'Budget', 'Technology', 'Training')),
+    quantity DECIMAL(15,2) NOT NULL,
+    unit_of_measure VARCHAR(20),
+    required_by_date DATE NOT NULL,
+    current_availability DECIMAL(15,2),
+    gap DECIMAL(15,2) GENERATED ALWAYS AS (quantity - COALESCE(current_availability, 0)) STORED,
+    priority VARCHAR(20) CHECK (priority IN ('Critical', 'High', 'Medium', 'Low')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.capacity_allocations (
+    allocation_id SERIAL PRIMARY KEY,
+    requirement_id INTEGER REFERENCES esg.capacity_requirements(requirement_id),
+    allocated_amount DECIMAL(15,2) NOT NULL,
+    allocation_date DATE NOT NULL,
+    allocation_source VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.capacity_requirements IS 'Tracks resource needs for ESG initiatives with gap analysis';
+COMMENT ON TABLE esg.capacity_allocations IS 'Records actual resource allocations to meet ESG requirements';
+
+-- ESG Technology Stack Inventory
+--
+-- Business Case: Proper tracking of ESG software and tools is essential for budget planning, vendor management, and avoiding redundant solutions.
+
+CREATE TABLE esg.technology_stack (
+    technology_id SERIAL PRIMARY KEY,
+    technology_name VARCHAR(200) NOT NULL,
+    vendor VARCHAR(100),
+    category VARCHAR(50) CHECK (category IN ('Data Collection', 'Analytics', 'Reporting', 'Disclosure', 'Risk Management')),
+    license_type VARCHAR(50),
+    annual_cost DECIMAL(15,2),
+    implementation_date DATE,
+    renewal_date DATE,
+    users INTEGER,
+    data_capacity_gb DECIMAL(15,2),
+    uptime_sla DECIMAL(5,2) CHECK (uptime_sla BETWEEN 0 AND 100),
+    compliance_standards VARCHAR(200), -- e.g., 'SOC2, ISO27001'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.technology_usage (
+    usage_id SERIAL PRIMARY KEY,
+    technology_id INTEGER REFERENCES esg.technology_stack(technology_id),
+    measurement_date DATE NOT NULL,
+    active_users INTEGER,
+    storage_used_gb DECIMAL(15,2),
+    api_calls INTEGER,
+    uptime_percentage DECIMAL(5,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_tech_measurement UNIQUE (technology_id, measurement_date)
+);
+
+COMMENT ON TABLE esg.technology_stack IS 'Inventory of ESG technology solutions with capacity details';
+COMMENT ON TABLE esg.technology_usage IS 'Tracks utilization metrics for ESG technologies over time';
+
+-- ESG Training Competency Framework
+--
+-- Business Case: Building internal ESG capabilities requires tracking employee training and competency levels across different risk domains.
+
+CREATE TABLE esg.competency_domains (
+    domain_id SERIAL PRIMARY KEY,
+    domain_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    criticality VARCHAR(20) CHECK (criticality IN ('Mandatory', 'Recommended', 'Optional')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.training_programs (
+    program_id SERIAL PRIMARY KEY,
+    program_name VARCHAR(200) NOT NULL,
+    domain_id INTEGER REFERENCES esg.competency_domains(domain_id),
+    duration_hours DECIMAL(5,1),
+    delivery_method VARCHAR(50) CHECK (delivery_method IN ('In-Person', 'Virtual', 'E-Learning', 'Hybrid')),
+    max_capacity INTEGER,
+    annual_frequency INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.employee_competencies (
+    competency_id SERIAL PRIMARY KEY,
+    employee_id VARCHAR(50) NOT NULL, -- Reference to HR system
+    domain_id INTEGER REFERENCES esg.competency_domains(domain_id),
+    proficiency_level VARCHAR(20) CHECK (proficiency_level IN ('Beginner', 'Intermediate', 'Advanced', 'Expert')),
+    last_training_date DATE,
+    next_refresh_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_employee_domain UNIQUE (employee_id, domain_id)
+);
+
+COMMENT ON TABLE esg.competency_domains IS 'Defines ESG competency areas required for effective risk management';
+COMMENT ON TABLE esg.training_programs IS 'Catalog of available ESG training programs with capacity constraints';
+COMMENT ON TABLE esg.employee_competencies IS 'Tracks employee ESG skills and training history';
+
+--ESG Resource Gap Analysis View
+--Business Case: Leadership needs visibility into resource constraints that may impact ESG goal achievement.
+
+CREATE OR REPLACE VIEW esg.vw_resource_gaps AS
+SELECT
+    i.initiative_name,
+    cr.resource_type,
+    cr.quantity AS required,
+    cr.current_availability AS available,
+    cr.gap,
+    cr.priority,
+    COALESCE(SUM(ca.allocated_amount), 0) AS allocated,
+    (cr.gap - COALESCE(SUM(ca.allocated_amount), 0)) AS remaining_gap,
+    cr.required_by_date,
+    CASE
+        WHEN (cr.gap - COALESCE(SUM(ca.allocated_amount), 0)) <= 0 THEN 'Fully Resourced'
+        WHEN CURRENT_DATE > cr.required_by_date THEN 'Overdue'
+        WHEN (cr.gap - COALESCE(SUM(ca.allocated_amount), 0)) > 0
+             AND CURRENT_DATE > (cr.required_by_date - INTERVAL '30 days') THEN 'Urgent'
+        ELSE 'Monitoring'
+    END AS status
+FROM
+    esg.capacity_requirements cr
+JOIN
+    esg.initiatives i ON cr.initiative_id = i.initiative_id
+LEFT JOIN
+    esg.capacity_allocations ca ON cr.requirement_id = ca.requirement_id
+GROUP BY
+    i.initiative_name, cr.resource_type, cr.quantity, cr.current_availability,
+    cr.gap, cr.priority, cr.required_by_date, cr.requirement_id
+ORDER BY
+    status, priority, required_by_date;
+
+COMMENT ON VIEW esg.vw_resource_gaps IS 'Identifies resource shortfalls for ESG initiatives with allocation tracking';
+
+---Technology Utilizaiton trends view
+---Business Case: IT teams need to monitor ESG tool usage to optimize licenses and plan upgrades.
+CREATE OR REPLACE VIEW esg.vw_technology_utilization AS
+SELECT
+    ts.technology_name,
+    ts.vendor,
+    ts.category,
+    ts.annual_cost,
+    ts.users AS licensed_users,
+    tu.measurement_date,
+    tu.active_users,
+    ROUND((tu.active_users::DECIMAL / NULLIF(ts.users, 0)) * 100, 1) AS user_utilization_pct,
+    tu.storage_used_gb,
+    ts.data_capacity_gb,
+    ROUND((tu.storage_used_gb / NULLIF(ts.data_capacity_gb, 0)) * 100, 1) AS storage_utilization_pct,
+    tu.uptime_percentage,
+    ts.uptime_sla,
+    CASE
+        WHEN tu.uptime_percentage < ts.uptime_sla THEN 'SLA Breach'
+        WHEN (tu.active_users::DECIMAL / NULLIF(ts.users, 0)) > 0.9 THEN 'Capacity Limit'
+        ELSE 'Normal'
+    END AS alert_status
+FROM
+    esg.technology_stack ts
+JOIN
+    (SELECT technology_id, measurement_date, active_users, storage_used_gb, uptime_percentage
+     FROM esg.technology_usage
+     WHERE measurement_date = (SELECT MAX(measurement_date) FROM esg.technology_usage tu2
+                              WHERE tu2.technology_id = esg.technology_usage.technology_id)) tu
+    ON ts.technology_id = tu.technology_id;
+
+COMMENT ON VIEW esg.vw_technology_utilization IS 'Monitors usage trends and capacity thresholds for ESG technologies';
+
+--Training capacity planning view
+-- Business Case: HR needs to schedule ESG training sessions based on competency gaps and room/venue availability.
+
+CREATE OR REPLACE VIEW esg.vw_training_capacity AS
+SELECT
+    cd.domain_name,
+    tp.program_name,
+    tp.delivery_method,
+    tp.duration_hours,
+    tp.max_capacity,
+    COUNT(ec.employee_id) FILTER (WHERE ec.proficiency_level IN ('Beginner', 'Intermediate')) AS employees_needing_training,
+    COUNT(ec.employee_id) FILTER (WHERE ec.next_refresh_date <= CURRENT_DATE + INTERVAL '90 days')) AS employees_due_refresh,
+    CEILING((COUNT(ec.employee_id) FILTER (WHERE ec.proficiency_level IN ('Beginner', 'Intermediate')) +
+           COUNT(ec.employee_id) FILTER (WHERE ec.next_refresh_date <= CURRENT_DATE + INTERVAL '90 days')) /
+           NULLIF(tp.max_capacity, 0)) AS sessions_required,
+    (tp.annual_frequency * tp.max_capacity) AS annual_capacity,
+    (COUNT(ec.employee_id) FILTER (WHERE ec.proficiency_level IN ('Beginner', 'Intermediate')) +
+     COUNT(ec.employee_id) FILTER (WHERE ec.next_refresh_date <= CURRENT_DATE + INTERVAL '90 days')) AS total_demand,
+    CASE
+        WHEN (tp.annual_frequency * tp.max_capacity) >=
+             (COUNT(ec.employee_id) FILTER (WHERE ec.proficiency_level IN ('Beginner', 'Intermediate')) +
+              COUNT(ec.employee_id) FILTER (WHERE ec.next_refresh_date <= CURRENT_DATE + INTERVAL '90 days')) THEN 'Adequate'
+        ELSE 'Insufficient'
+    END AS capacity_status
+FROM
+    esg.competency_domains cd
+JOIN
+    esg.training_programs tp ON cd.domain_id = tp.domain_id
+LEFT JOIN
+    esg.employee_competencies ec ON cd.domain_id = ec.domain_id
+GROUP BY
+    cd.domain_name, tp.program_name, tp.delivery_method, tp.duration_hours,
+    tp.max_capacity, tp.annual_frequency;
+
+COMMENT ON VIEW esg.vw_training_capacity IS 'Analyzes training demand vs capacity for ESG competency development';
+
+--ESG Initiative Resource Forecast MV
+--Business Case: Financial planning requires aggregated resource projections across all ESG initiatives.
+CREATE MATERIALIZED VIEW esg.mv_initiative_resource_forecast AS
+SELECT
+    i.initiative_id,
+    i.initiative_name,
+    i.status,
+    DATE_TRUNC('quarter', cr.required_by_date) AS quarter,
+    cr.resource_type,
+    SUM(cr.quantity) AS total_required,
+    SUM(cr.current_availability) AS total_available,
+    SUM(cr.gap) AS total_gap,
+    SUM(COALESCE(ca.allocated_amount, 0)) AS total_allocated,
+    SUM(cr.gap - COALESCE(ca.allocated_amount, 0)) AS remaining_gap,
+    COUNT(DISTINCT cr.requirement_id) AS requirement_count
+FROM
+    esg.initiatives i
+JOIN
+    esg.capacity_requirements cr ON i.initiative_id = cr.initiative_id
+LEFT JOIN
+    esg.capacity_allocations ca ON cr.requirement_id = ca.requirement_id
+WHERE
+    cr.required_by_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '2 years'
+GROUP BY
+    i.initiative_id, i.initiative_name, i.status, DATE_TRUNC('quarter', cr.required_by_date), cr.resource_type
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_initiative_resource_forecast IS 'Quarterly aggregated resource forecasts for ESG initiatives with gap analysis';
+
+-- Technology stack capacity mv
+-- Business Case: IT capacity planning requires historical trends to predict future ESG technology needs.
+CREATE MATERIALIZED VIEW esg.mv_technology_capacity_trends AS
+SELECT
+    ts.technology_id,
+    ts.technology_name,
+    ts.category,
+    DATE_TRUNC('month', tu.measurement_date) AS month,
+    AVG(tu.active_users) AS avg_active_users,
+    MAX(tu.active_users) AS peak_active_users,
+    AVG(tu.storage_used_gb) AS avg_storage_used,
+    MAX(tu.storage_used_gb) AS peak_storage_used,
+    ts.users AS license_capacity,
+    ts.data_capacity_gb,
+    ROUND((AVG(tu.active_users) / NULLIF(ts.users, 0)) * 100, 1) AS avg_user_utilization,
+    ROUND((MAX(tu.active_users) / NULLIF(ts.users, 0)) * 100, 1) AS peak_user_utilization,
+    ROUND((AVG(tu.storage_used_gb) / NULLIF(ts.data_capacity_gb, 0)) * 100, 1) AS avg_storage_utilization,
+    ROUND((MAX(tu.storage_used_gb) / NULLIF(ts.data_capacity_gb, 0)) * 100, 1) AS peak_storage_utilization
+FROM
+    esg.technology_stack ts
+JOIN
+    esg.technology_usage tu ON ts.technology_id = tu.technology_id
+WHERE
+    tu.measurement_date >= CURRENT_DATE - INTERVAL '18 months'
+GROUP BY
+    ts.technology_id, ts.technology_name, ts.category, DATE_TRUNC('month', tu.measurement_date),
+    ts.users, ts.data_capacity_gb
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_technology_capacity_trends IS 'Monthly trends in ESG technology utilization for capacity planning';
+
+
+-- ESG Initiative Capacity Planning Stored Procedure
+--Business Case: Program managers need to simulate different resourcing scenarios for ESG initiatives.
+CREATE OR REPLACE PROCEDURE esg.sp_simulate_initiative_capacity(
+    p_initiative_id INTEGER,
+    p_resource_type VARCHAR(50),
+    p_scenario_name VARCHAR(100),
+    p_additional_amount DECIMAL(15,2),
+    OUT p_original_gap DECIMAL(15,2),
+    OUT p_new_gap DECIMAL(15,2),
+    OUT p_gap_reduction_pct DECIMAL(5,2),
+    OUT p_cost_implications TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_requirement RECORD;
+    v_total_cost DECIMAL(15,2) := 0;
+BEGIN
+    -- Get current gap for the initiative and resource type
+    SELECT SUM(quantity) AS total_required,
+           SUM(current_availability) AS total_available,
+           SUM(gap) AS total_gap
+    INTO v_requirement
+    FROM esg.capacity_requirements
+    WHERE initiative_id = p_initiative_id
+    AND resource_type = p_resource_type
+    GROUP BY initiative_id, resource_type;
+
+    IF v_requirement IS NULL THEN
+        RAISE EXCEPTION 'No capacity requirements found for initiative % and resource type %',
+                        p_initiative_id, p_resource_type;
+    END IF;
+
+    p_original_gap := v_requirement.total_gap;
+    p_new_gap := GREATEST(0, v_requirement.total_gap - p_additional_amount);
+    p_gap_reduction_pct := CASE WHEN v_requirement.total_gap > 0
+                                THEN (p_additional_amount / v_requirement.total_gap) * 100
+                                ELSE 0 END;
+
+    -- Estimate cost implications based on resource type
+    IF p_resource_type = 'Personnel' THEN
+        v_total_cost := p_additional_amount * 100000; -- Assuming $100k avg fully loaded cost per FTE
+        p_cost_implications := 'Approx. $' || ROUND(v_total_cost) || ' annual cost for ' ||
+                              p_additional_amount || ' additional FTEs';
+    ELSIF p_resource_type = 'Budget' THEN
+        v_total_cost := p_additional_amount;
+        p_cost_implications := 'Direct budget impact of $' || ROUND(v_total_cost);
+    ELSIF p_resource_type = 'Technology' THEN
+        v_total_cost := p_additional_amount * 5000; -- Assuming $5k avg annual cost per license
+        p_cost_implications := 'Approx. $' || ROUND(v_total_cost) || ' annual cost for ' ||
+                              p_additional_amount || ' additional licenses';
+    ELSE
+        p_cost_implications := 'Cost implications vary based on specific requirements';
+    END IF;
+
+    -- Log the simulation scenario for audit purposes
+    INSERT INTO esg.capacity_simulations (initiative_id, resource_type, scenario_name,
+                                         original_gap, additional_amount, new_gap, cost_estimate)
+    VALUES (p_initiative_id, p_resource_type, p_scenario_name,
+            p_original_gap, p_additional_amount, p_new_gap, v_total_cost);
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_simulate_initiative_capacity IS 'Simulates the impact of additional resources on ESG initiative capacity gaps with cost estimates';
+
+
+-- ESG Technology Right-Sizing Procedure
+--
+-- Business Case: IT needs data-driven recommendations for optimizing ESG software licenses and infrastructure.
+
+CREATE OR REPLACE PROCEDURE esg.sp_recommend_technology_rightsizing(
+    p_threshold_pct DECIMAL(5,2) DEFAULT 80.0,
+    p_forecast_months INTEGER DEFAULT 12,
+    OUT p_recommendations TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_recommendation RECORD;
+BEGIN
+    p_recommendations := '';
+
+    FOR v_recommendation IN
+        WITH growth_rates AS (
+            SELECT
+                technology_id,
+                technology_name,
+                category,
+                users AS current_licenses,
+                data_capacity_gb,
+                AVG(peak_user_utilization) AS avg_peak_utilization,
+                AVG(peak_storage_utilization) AS avg_storage_utilization,
+                -- Calculate 6-month growth rate for users
+                REGR_SLOPE(peak_active_users, EXTRACT(EPOCH FROM month)) OVER
+                    (PARTITION BY technology_id) * 2592000 AS monthly_user_growth,
+                -- Calculate 6-month growth rate for storage
+                REGR_SLOPE(peak_storage_used, EXTRACT(EPOCH FROM month)) OVER
+                    (PARTITION BY technology_id) AS monthly_storage_growth
+            FROM
+                esg.mv_technology_capacity_trends
+            WHERE
+                month >= CURRENT_DATE - INTERVAL '6 months'
+            GROUP BY
+                technology_id, technology_name, category, users, data_capacity_gb
+        )
+        SELECT
+            technology_id,
+            technology_name,
+            category,
+            current_licenses,
+            data_capacity_gb,
+            avg_peak_utilization,
+            avg_storage_utilization,
+            -- Projected user license needs
+            CASE
+                WHEN avg_peak_utilization < p_threshold_pct THEN
+                    'Reduce licenses by ' || (current_licenses - CEIL(current_licenses * (avg_peak_utilization / p_threshold_pct))) ||
+                    ' to ' || CEIL(current_licenses * (avg_peak_utilization / p_threshold_pct))
+                WHEN monthly_user_growth > 0 THEN
+                    'Increase licenses by ' || CEIL(monthly_user_growth * p_forecast_months) ||
+                    ' to ' || (current_licenses + CEIL(monthly_user_growth * p_forecast_months))
+                ELSE 'Maintain current licenses'
+            END AS user_recommendation,
+            -- Projected storage needs
+            CASE
+                WHEN avg_storage_utilization < p_threshold_pct THEN
+                    'Reduce storage by ' || (data_capacity_gb - CEIL(data_capacity_gb * (avg_storage_utilization / p_threshold_pct))) || 'GB'
+                WHEN monthly_storage_growth > 0 THEN
+                    'Increase storage by ' || CEIL(monthly_storage_growth * p_forecast_months) || 'GB'
+                ELSE 'Maintain current storage'
+            END AS storage_recommendation
+        FROM
+            growth_rates
+        WHERE
+            avg_peak_utilization < p_threshold_pct OR
+            avg_peak_utilization > p_threshold_pct * 0.9 OR
+            avg_storage_utilization < p_threshold_pct OR
+            avg_storage_utilization > p_threshold_pct * 0.9
+    LOOP
+        p_recommendations := p_recommendations ||
+            E'\nTechnology: ' || v_recommendation.technology_name || ' (' || v_recommendation.category || ')' ||
+            E'\n  Current Licenses: ' || v_recommendation.current_licenses ||
+            ' (Peak Utilization: ' || ROUND(v_recommendation.avg_peak_utilization, 1) || '%)' ||
+            E'\n  Recommendation: ' || v_recommendation.user_recommendation ||
+            E'\n  Current Storage: ' || v_recommendation.data_capacity_gb || 'GB' ||
+            ' (Peak Utilization: ' || ROUND(v_recommendation.avg_storage_utilization, 1) || '%)' ||
+            E'\n  Recommendation: ' || v_recommendation.storage_recommendation || E'\n';
+    END LOOP;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_recommend_technology_rightsizing IS 'Analyzes technology utilization trends and provides license/storage optimization recommendations';
+
+--ESG Training schedule optimizer
+-- Business Case: HR needs to optimize training schedules considering employee availability, room capacity, and priority skills.
+CREATE OR REPLACE PROCEDURE esg.sp_optimize_training_schedule(
+    p_planning_horizon_months INTEGER DEFAULT 6,
+    OUT p_schedule TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_month DATE;
+    v_domain RECORD;
+    v_sessions_needed INTEGER;
+    v_available_capacity INTEGER;
+BEGIN
+    p_schedule := 'Training Schedule Optimization (' || p_planning_horizon_months || ' months):\n\n';
+
+    FOR i IN 0..p_planning_horizon_months-1 LOOP
+        v_month := DATE_TRUNC('month', CURRENT_DATE) + (i * INTERVAL '1 month');
+        p_schedule := p_schedule || 'Month: ' || TO_CHAR(v_month, 'YYYY-MM') || E'\n';
+
+        FOR v_domain IN
+            SELECT
+                cd.domain_id,
+                cd.domain_name,
+                cd.criticality,
+                tp.program_id,
+                tp.program_name,
+                tp.duration_hours,
+                tp.max_capacity,
+                COUNT(ec.employee_id) FILTER (WHERE ec.proficiency_level IN ('Beginner', 'Intermediate')) AS new_trainees,
+                COUNT(ec.employee_id) FILTER (WHERE ec.next_refresh_date <= v_month + INTERVAL '1 month')) AS refreshers
+            FROM
+                esg.competency_domains cd
+            JOIN
+                esg.training_programs tp ON cd.domain_id = tp.domain_id
+            LEFT JOIN
+                esg.employee_competencies ec ON cd.domain_id = ec.domain_id
+            GROUP BY
+                cd.domain_id, cd.domain_name, cd.criticality, tp.program_id, tp.program_name,
+                tp.duration_hours, tp.max_capacity
+            ORDER BY
+                cd.criticality DESC,
+                (COUNT(ec.employee_id) FILTER (WHERE ec.proficiency_level IN ('Beginner', 'Intermediate')) +
+                COUNT(ec.employee_id) FILTER (WHERE ec.next_refresh_date <= v_month + INTERVAL '1 month')) DESC
+        LOOP
+            v_sessions_needed := CEIL((v_domain.new_trainees + v_domain.refreshers) / NULLIF(v_domain.max_capacity, 0));
+
+            IF v_sessions_needed > 0 THEN
+                p_schedule := p_schedule ||
+                    '  ' || v_domain.domain_name || ' (' || v_domain.criticality || ')' ||
+                    E'\n    Program: ' || v_domain.program_name ||
+                    ' (' || v_domain.duration_hours || ' hrs, Capacity: ' || v_domain.max_capacity || ')' ||
+                    E'\n    Needed: ' || v_sessions_needed || ' session(s) for ' ||
+                    (v_domain.new_trainees + v_domain.refreshers) || ' employees (' ||
+                    v_domain.new_trainees || ' new + ' || v_domain.refreshers || ' refresh)' || E'\n';
+            END IF;
+        END LOOP;
+
+        p_schedule := p_schedule || E'\n';
+    END LOOP;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_optimize_training_schedule IS 'Generates optimized training schedule based on competency gaps, priorities, and capacity constraints';
+
+
+
+-- intiative capacity simulation
+CALL esg.sp_simulate_initiative_capacity(
+    p_initiative_id := 15, -- Renewable Energy Transition
+    p_resource_type := 'Budget',
+    p_scenario_name := 'Accelerated Timeline',
+    p_additional_amount := 500000,
+    p_original_gap := NULL,
+    p_new_gap := NULL,
+    p_gap_reduction_pct := NULL,
+    p_cost_implications := NULL
+);
+
+-- technology right sizing
+
+DO $$
+DECLARE
+    v_recommendations TEXT;
+BEGIN
+    CALL esg.sp_recommend_technology_rightsizing(
+        p_threshold_pct := 75.0, -- Target 75% utilization
+        p_forecast_months := 12,
+        p_recommendations := v_recommendations
+    );
+    RAISE NOTICE '%', v_recommendations;
+END;
+$$;
+
+--training schedule optimization
+DO $$
+DECLARE
+    v_schedule TEXT;
+BEGIN
+    CALL esg.sp_optimize_training_schedule(
+        p_planning_horizon_months := 6,
+        p_schedule := v_schedule
+    );
+    RAISE NOTICE '%', v_schedule;
+END;
+$$;
+
+-- Additional indexes for capacity planning
+CREATE INDEX idx_capacity_requirements_initiative ON esg.capacity_requirements(initiative_id);
+CREATE INDEX idx_capacity_requirements_resource ON esg.capacity_requirements(resource_type);
+CREATE INDEX idx_technology_usage_dates ON esg.technology_usage(measurement_date);
+CREATE INDEX idx_employee_competencies_refresh ON esg.employee_competencies(next_refresh_date);
+
+
+
+-- ESG Risk Heatmap visualization framework
+-- Business Case: Executives need dynamic risk visualization to prioritize mitigation efforts and allocate resources effectively.
+CREATE TABLE esg.risk_heatmap_settings (
+    setting_id SERIAL PRIMARY KEY,
+    user_role VARCHAR(50) NOT NULL,
+    likelihood_bands VARCHAR(100) NOT NULL DEFAULT '1-2,3-4,5',
+    impact_bands VARCHAR(100) NOT NULL DEFAULT '1-2,3-4,5',
+    color_scheme VARCHAR(50) NOT NULL DEFAULT 'TrafficLight',
+    default_view VARCHAR(50) NOT NULL DEFAULT 'Materiality',
+    refresh_frequency INTEGER NOT NULL DEFAULT 24, -- hours
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.risk_heatmap_settings IS 'Stores user preferences for ESG risk heatmap visualizations to support decision-making';
+
+CREATE MATERIALIZED VIEW esg.mv_dynamic_risk_heatmap AS
+SELECT
+    r.risk_id,
+    r.risk_name,
+    rc.category_name,
+    rc.category_type,
+    r.materiality_level,
+    ra.likelihood_score,
+    ra.impact_score,
+    ra.overall_score,
+    ra.assessment_date,
+    i.initiative_name AS mitigation_initiative,
+    i.status AS initiative_status,
+    CASE
+        WHEN ra.overall_score >= 16 THEN 'Extreme'
+        WHEN ra.overall_score >= 12 THEN 'High'
+        WHEN ra.overall_score >= 8 THEN 'Medium'
+        ELSE 'Low'
+    END AS risk_band,
+    DENSE_RANK() OVER (ORDER BY ra.overall_score DESC) AS risk_rank
+FROM
+    esg.risks r
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+JOIN
+    esg.risk_assessments ra ON r.risk_id = ra.risk_id
+LEFT JOIN
+    esg.initiatives i ON r.mitigation_strategy LIKE '%' || i.initiative_name || '%'
+WHERE
+    ra.assessment_date = (SELECT MAX(assessment_date)
+                         FROM esg.risk_assessments ra2
+                         WHERE ra2.risk_id = ra.risk_id)
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_dynamic_risk_heatmap IS 'Pre-aggregated risk data optimized for heatmap visualization with dynamic banding';
+
+
+
+-- ESG Regulatory Change Impact Tracker
+--
+-- Business Case: Compliance teams need to monitor evolving ESG regulations and assess their operational impact.
+
+CREATE TABLE esg.regulatory_changes (
+    change_id SERIAL PRIMARY KEY,
+    regulation_id INTEGER REFERENCES esg.regulatory_requirements(regulation_id),
+    change_date DATE NOT NULL,
+    change_type VARCHAR(50) CHECK (change_type IN ('New Requirement', 'Amendment', 'Enforcement', 'Guidance')),
+    change_description TEXT NOT NULL,
+    impact_level VARCHAR(20) CHECK (impact_level IN ('Low', 'Medium', 'High', 'Critical')),
+    implementation_deadline DATE,
+    responsible_department VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.regulatory_change_actions (
+    action_id SERIAL PRIMARY KEY,
+    change_id INTEGER REFERENCES esg.regulatory_changes(change_id),
+    action_description TEXT NOT NULL,
+    action_type VARCHAR(50) CHECK (action_type IN ('Policy Update', 'Process Change', 'Training', 'Disclosure', 'Technology')),
+    status VARCHAR(20) CHECK (status IN ('Not Started', 'In Progress', 'Completed', 'Verified')),
+    due_date DATE,
+    completion_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.regulatory_changes IS 'Tracks specific changes to ESG regulations with impact assessment';
+COMMENT ON TABLE esg.regulatory_change_actions IS 'Records actions taken to implement regulatory changes';
+
+CREATE OR REPLACE VIEW esg.vw_regulatory_change_impact AS
+SELECT
+    rr.regulation_name,
+    rr.jurisdiction,
+    rc.change_date,
+    rc.change_type,
+    rc.impact_level,
+    rc.implementation_deadline,
+    COUNT(ca.action_id) AS total_actions,
+    COUNT(ca.action_id) FILTER (WHERE ca.status = 'Completed')) AS completed_actions,
+    COUNT(ca.action_id) FILTER (WHERE ca.status != 'Completed' AND ca.due_date < CURRENT_DATE)) AS overdue_actions,
+    rc.responsible_department,
+    CASE
+        WHEN COUNT(ca.action_id) = 0 THEN 'No Action'
+        WHEN COUNT(ca.action_id) FILTER (WHERE ca.status != 'Completed')) = 0 THEN 'Fully Implemented'
+        WHEN COUNT(ca.action_id) FILTER (WHERE ca.due_date < CURRENT_DATE AND ca.status != 'Completed')) > 0 THEN 'Critical Path'
+        ELSE 'In Progress'
+    END AS implementation_status
+FROM
+    esg.regulatory_changes rc
+JOIN
+    esg.regulatory_requirements rr ON rc.regulation_id = rr.regulation_id
+LEFT JOIN
+    esg.regulatory_change_actions ca ON rc.change_id = ca.change_id
+GROUP BY
+    rr.regulation_name, rr.jurisdiction, rc.change_date, rc.change_type,
+    rc.impact_level, rc.implementation_deadline, rc.responsible_department, rc.change_id;
+
+COMMENT ON VIEW esg.vw_regulatory_change_impact IS 'Tracks progress of implementing regulatory changes with status indicators';
+
+
+--
+--
+-- ESG Data Lineage & Provenance Tracking
+--
+-- Business Case: Auditors require full traceability of ESG data from source to disclosure to ensure reliability.
+
+CREATE TABLE esg.data_lineage (
+    lineage_id SERIAL PRIMARY KEY,
+    metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    data_source VARCHAR(200) NOT NULL,
+    extraction_method VARCHAR(100),
+    transformation_rules TEXT,
+    quality_checks TEXT,
+    steward VARCHAR(100) NOT NULL,
+    last_refresh TIMESTAMP WITH TIME ZONE,
+    next_refresh TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.data_lineage_versions (
+    version_id SERIAL PRIMARY KEY,
+    lineage_id INTEGER REFERENCES esg.data_lineage(lineage_id),
+    version_number INTEGER NOT NULL,
+    change_description TEXT NOT NULL,
+    changed_by VARCHAR(100) NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_lineage_version UNIQUE (lineage_id, version_number)
+);
+
+COMMENT ON TABLE esg.data_lineage IS 'Documents the origin, transformation, and stewardship of ESG data elements';
+COMMENT ON TABLE esg.data_lineage_versions IS 'Tracks changes to data lineage definitions over time for audit purposes';
+
+CREATE OR REPLACE PROCEDURE esg.sp_track_data_change(
+    p_metric_id INTEGER,
+    p_change_description TEXT,
+    p_changed_by VARCHAR(100)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_lineage_id INTEGER;
+    v_next_version INTEGER;
+BEGIN
+    -- Find or create lineage record
+    SELECT lineage_id INTO v_lineage_id
+    FROM esg.data_lineage
+    WHERE metric_id = p_metric_id;
+
+    IF v_lineage_id IS NULL THEN
+        INSERT INTO esg.data_lineage (metric_id, steward)
+        VALUES (p_metric_id, p_changed_by)
+        RETURNING lineage_id INTO v_lineage_id;
+    END IF;
+
+    -- Get next version number
+    SELECT COALESCE(MAX(version_number), 0) + 1 INTO v_next_version
+    FROM esg.data_lineage_versions
+    WHERE lineage_id = v_lineage_id;
+
+    -- Record the change
+    INSERT INTO esg.data_lineage_versions (
+        lineage_id, version_number, change_description, changed_by
+    ) VALUES (
+        v_lineage_id, v_next_version, p_change_description, p_changed_by
+    );
+
+    -- Update last refresh timestamp
+    UPDATE esg.data_lineage
+    SET last_refresh = CURRENT_TIMESTAMP
+    WHERE lineage_id = v_lineage_id;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_track_data_change IS 'Records changes to ESG data definitions and transformations for audit trails';
+
+
+-- ESG Stakeholder Sentiment Analysis
+--
+-- Business Case: Investor relations teams need to monitor ESG-related sentiment from stakeholders to identify emerging concerns.
+
+CREATE TABLE esg.sentiment_sources (
+    source_id SERIAL PRIMARY KEY,
+    source_name VARCHAR(100) NOT NULL,
+    source_type VARCHAR(50) CHECK (source_type IN ('Social Media', 'News', 'Investor Call', 'Survey', 'Direct Feedback')),
+    extraction_method VARCHAR(100),
+    refresh_frequency VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.stakeholder_sentiment (
+    sentiment_id SERIAL PRIMARY KEY,
+    source_id INTEGER REFERENCES esg.sentiment_sources(source_id),
+    analysis_date DATE NOT NULL,
+    stakeholder_group VARCHAR(50) CHECK (stakeholder_group IN ('Investors', 'Employees', 'Customers', 'Regulators', 'Communities')),
+    topic VARCHAR(100) NOT NULL,
+    sentiment_score DECIMAL(5,2) CHECK (sentiment_score BETWEEN -1 AND 1),
+    volume INTEGER,
+    key_phrases TEXT[],
+    alert_flag BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.sentiment_sources IS 'Defines sources for ESG-related sentiment analysis';
+COMMENT ON TABLE esg.stakeholder_sentiment IS 'Stores analyzed sentiment data from various stakeholder groups';
+
+CREATE MATERIALIZED VIEW esg.mv_sentiment_trends AS
+SELECT
+    stakeholder_group,
+    topic,
+    DATE_TRUNC('week', analysis_date) AS week_start,
+    AVG(sentiment_score) AS avg_sentiment,
+    SUM(volume) AS total_volume,
+    COUNT(*) FILTER (WHERE sentiment_score < -0.5) AS negative_count,
+    COUNT(*) FILTER (WHERE sentiment_score > 0.5) AS positive_count,
+    ARRAY(
+        SELECT DISTINCT unnest(key_phrases)
+        FROM esg.stakeholder_sentiment ss2
+        WHERE ss2.stakeholder_group = ss.stakeholder_group
+        AND ss2.topic = ss.topic
+        AND DATE_TRUNC('week', ss2.analysis_date) = DATE_TRUNC('week', ss.analysis_date)
+    ) AS trending_phrases
+FROM
+    esg.stakeholder_sentiment ss
+WHERE
+    analysis_date >= CURRENT_DATE - INTERVAL '3 months'
+GROUP BY
+    stakeholder_group, topic, DATE_TRUNC('week', analysis_date)
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_sentiment_trends IS 'Aggregates sentiment data by stakeholder group and topic for trend analysis';
+
+CREATE OR REPLACE PROCEDURE esg.sp_generate_sentiment_alerts(
+    p_threshold_change DECIMAL(5,2) DEFAULT 0.3
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Update alert flags based on significant sentiment changes
+    UPDATE esg.stakeholder_sentiment ss
+    SET alert_flag = TRUE
+    FROM (
+        SELECT
+            sentiment_id,
+            ABS(sentiment_score - LAG(sentiment_score) OVER (
+                PARTITION BY stakeholder_group, topic
+                ORDER BY analysis_date
+            )) AS score_change,
+            volume - LAG(volume) OVER (
+                PARTITION BY stakeholder_group, topic
+                ORDER BY analysis_date
+            ) AS volume_change
+        FROM
+            esg.stakeholder_sentiment
+        WHERE
+            analysis_date >= CURRENT_DATE - INTERVAL '7 days'
+    ) changes
+    WHERE ss.sentiment_id = changes.sentiment_id
+    AND (changes.score_change >= p_threshold_change OR changes.volume_change >= 100);
+
+    -- Notify stakeholders of new alerts
+    INSERT INTO esg.notifications (notification_type, message, priority)
+    SELECT
+        'Sentiment Alert',
+        'Significant change detected for ' || stakeholder_group || ' on topic: ' || topic ||
+        ' (New Score: ' || sentiment_score || ', Volume: ' || volume || ')',
+        'High'
+    FROM
+        esg.stakeholder_sentiment
+    WHERE
+        alert_flag = TRUE
+        AND created_at >= CURRENT_TIMESTAMP - INTERVAL '1 hour';
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_generate_sentiment_alerts IS 'Identifies and flags significant changes in stakeholder sentiment for immediate attention';
+
+
+
+-- ESG Control Effectiveness Monitoring
+-- Business Case: Internal audit needs to evaluate whether risk mitigation controls are operating as intended.
+CREATE TABLE esg.risk_controls (
+    control_id SERIAL PRIMARY KEY,
+    risk_id INTEGER REFERENCES esg.risks(risk_id),
+    control_name VARCHAR(200) NOT NULL,
+    control_description TEXT,
+    control_type VARCHAR(50) CHECK (control_type IN ('Preventive', 'Detective', 'Corrective', 'Compensating')),
+    frequency VARCHAR(50) NOT NULL,
+    owner VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.control_testing (
+    test_id SERIAL PRIMARY KEY,
+    control_id INTEGER REFERENCES esg.risk_controls(control_id),
+    test_date DATE NOT NULL,
+    tested_by VARCHAR(100) NOT NULL,
+    test_method VARCHAR(100),
+    sample_size INTEGER,
+    sample_description TEXT,
+    defects_found INTEGER,
+    effectiveness_rating INTEGER CHECK (effectiveness_rating BETWEEN 1 AND 5),
+    test_results TEXT,
+    remediation_plan TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.risk_controls IS 'Documents controls implemented to mitigate ESG risks';
+COMMENT ON TABLE esg.control_testing IS 'Records testing of control effectiveness with results';
+
+CREATE OR REPLACE VIEW esg.vw_control_effectiveness AS
+SELECT
+    r.risk_id,
+    r.risk_name,
+    rc.category_name,
+    c.control_id,
+    c.control_name,
+    c.control_type,
+    c.owner,
+    COUNT(t.test_id) AS tests_conducted,
+    MAX(t.test_date) AS last_test_date,
+    AVG(t.effectiveness_rating) AS avg_effectiveness,
+    SUM(t.defects_found) AS total_defects,
+    CASE
+        WHEN COUNT(t.test_id) = 0 THEN 'Not Tested'
+        WHEN AVG(t.effectiveness_rating) >= 4 THEN 'Effective'
+        WHEN AVG(t.effectiveness_rating) >= 2.5 THEN 'Partially Effective'
+        ELSE 'Ineffective'
+    END AS effectiveness_status
+FROM
+    esg.risks r
+JOIN
+    esg.risk_controls c ON r.risk_id = c.risk_id
+JOIN
+    esg.risk_categories rc ON r.category_id = rc.category_id
+LEFT JOIN
+    esg.control_testing t ON c.control_id = t.control_id
+GROUP BY
+    r.risk_id, r.risk_name, rc.category_name, c.control_id, c.control_name, c.control_type, c.owner;
+
+COMMENT ON VIEW esg.vw_control_effectiveness IS 'Evaluates the effectiveness of controls mitigating ESG risks based on testing results';
+
+CREATE OR REPLACE PROCEDURE esg.sp_schedule_control_tests()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Schedule tests for controls based on their frequency
+    INSERT INTO esg.control_testing (
+        control_id,
+        test_date,
+        tested_by,
+        test_method
+    )
+    SELECT
+        c.control_id,
+        CASE
+            WHEN c.frequency = 'Monthly' THEN CURRENT_DATE + INTERVAL '1 month'
+            WHEN c.frequency = 'Quarterly' THEN CURRENT_DATE + INTERVAL '3 months'
+            WHEN c.frequency = 'Annual' THEN CURRENT_DATE + INTERVAL '1 year'
+            ELSE CURRENT_DATE + INTERVAL '6 months' -- Default for other frequencies
+        END AS test_date,
+        c.owner AS tested_by,
+        CASE
+            WHEN c.control_type = 'Preventive' THEN 'Sample Testing'
+            WHEN c.control_type = 'Detective' THEN 'Full Population'
+            ELSE 'Targeted Review'
+        END AS test_method
+    FROM
+        esg.risk_controls c
+    WHERE
+        NOT EXISTS (
+            SELECT 1
+            FROM esg.control_testing t
+            WHERE t.control_id = c.control_id
+            AND t.test_date >= CURRENT_DATE - INTERVAL '1 month'
+        );
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_schedule_control_tests IS 'Automatically schedules control tests based on defined frequencies and recent testing history';
+
+
+-- Example integration with HR system for competency tracking
+CREATE FOREIGN TABLE hr.employees (
+    employee_id VARCHAR(50),
+    name VARCHAR(100),
+    department VARCHAR(50),
+    position VARCHAR(50)
+) SERVER hr_system;
+
+-- Create view that combines ESG competencies with HR data
+CREATE VIEW esg.vw_employee_esg_skills AS
+SELECT
+    e.employee_id,
+    e.name,
+    e.department,
+    cd.domain_name,
+    ec.proficiency_level,
+    ec.last_training_date
+FROM
+    hr.employees e
+JOIN
+    esg.employee_competencies ec ON e.employee_id = ec.employee_id
+JOIN
+    esg.competency_domains cd ON ec.domain_id = cd.domain_id;
+
+
+
+    -- Add indexes for new tables
+CREATE INDEX idx_sentiment_stakeholder_topic ON esg.stakeholder_sentiment(stakeholder_group, topic);
+CREATE INDEX idx_control_testing_dates ON esg.control_testing(test_date);
+CREATE INDEX idx_regulatory_changes_deadline ON esg.regulatory_changes(implementation_deadline);
+
+-- Partition large tables by time ranges
+CREATE TABLE esg.sentiment_data_partitioned (
+    LIKE esg.stakeholder_sentiment INCLUDING INDEXES
+) PARTITION BY RANGE (analysis_date);
+
+-- Create monthly partitions
+CREATE TABLE esg.sentiment_data_2025_11 PARTITION OF esg.sentiment_data_partitioned
+    FOR VALUES FROM ('2025-1-01') TO ('2023-05-01');
+
+
+    CREATE OR REPLACE PROCEDURE esg.sp_maintain_partitions()
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        -- Create next month's partition for sentiment data
+        EXECUTE format('
+            CREATE TABLE IF NOT EXISTS esg.sentiment_data_%s PARTITION OF esg.sentiment_data_partitioned
+            FOR VALUES FROM (%L) TO (%L)',
+            to_char(CURRENT_DATE + INTERVAL '1 month', 'YYYY_MM'),
+            date_trunc('month', CURRENT_DATE + INTERVAL '1 month'),
+            date_trunc('month', CURRENT_DATE + INTERVAL '2 month')
+        );
+
+        -- Archive old data (retention policy: 3 years)
+        EXECUTE format('
+            DROP TABLE IF EXISTS esg.sentiment_data_%s',
+            to_char(CURRENT_DATE - INTERVAL '3 years', 'YYYY_MM')
+        );
+    END;
+    $$;
+
+    COMMENT ON PROCEDURE esg.sp_maintain_partitions IS 'Manages time-based partitions for large tables according to retention policies';
+
+-- ESG Transition Risk Modeling Framework
+-- Business Case: Financial institutions need to assess portfolio exposure to carbon-intensive assets under different transition scenarios to comply with TCFD and meet net-zero commitments.
+
+CREATE TABLE esg.transition_scenarios (
+    scenario_id SERIAL PRIMARY KEY,
+    scenario_name VARCHAR(100) NOT NULL,
+    scenario_type VARCHAR(50) CHECK (scenario_type IN ('Net Zero 2050', 'Delayed Transition', 'Disorderly Transition')),
+    warming_target DECIMAL(3,1), -- Degrees Celsius
+    reference_model VARCHAR(100),
+    publication_year INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.portfolio_exposure (
+    exposure_id SERIAL PRIMARY KEY,
+    scenario_id INTEGER REFERENCES esg.transition_scenarios(scenario_id),
+    asset_class VARCHAR(50) NOT NULL,
+    sector VARCHAR(50) NOT NULL,
+    exposure_value DECIMAL(15,2) NOT NULL,
+    carbon_intensity DECIMAL(15,2), -- tCO2e/$M revenue
+    stranding_risk DECIMAL(5,2) CHECK (stranding_risk BETWEEN 0 AND 1),
+    transition_risk_score DECIMAL(5,2) CHECK (transition_risk_score BETWEEN 0 AND 10),
+    analysis_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_scenario_exposure UNIQUE (scenario_id, asset_class, sector, analysis_date)
+);
+
+COMMENT ON TABLE esg.transition_scenarios IS 'Stores climate transition scenarios used for portfolio risk assessment';
+COMMENT ON TABLE esg.portfolio_exposure IS 'Tracks financial exposure to transition risks by asset class and sector';
+
+CREATE MATERIALIZED VIEW esg.mv_transition_risk_summary AS
+SELECT
+    ts.scenario_name,
+    ts.warming_target,
+    pe.asset_class,
+    pe.sector,
+    SUM(pe.exposure_value) AS total_exposure,
+    AVG(pe.carbon_intensity) AS avg_carbon_intensity,
+    SUM(pe.exposure_value * pe.stranding_risk) AS at_risk_exposure,
+    RANK() OVER (PARTITION BY ts.scenario_id ORDER BY SUM(pe.exposure_value * pe.stranding_risk) DESC) AS risk_rank
+FROM
+    esg.portfolio_exposure pe
+JOIN
+    esg.transition_scenarios ts ON pe.scenario_id = ts.scenario_id
+WHERE
+    pe.analysis_date = (SELECT MAX(analysis_date) FROM esg.portfolio_exposure)
+GROUP BY
+    ts.scenario_id, ts.scenario_name, ts.warming_target, pe.asset_class, pe.sector
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_transition_risk_summary IS 'Aggregates portfolio exposure to transition risks by scenario for strategic decision-making';
+
+CREATE OR REPLACE PROCEDURE esg.sp_calculate_transition_risk(
+    p_scenario_id INTEGER,
+    p_as_of_date DATE DEFAULT CURRENT_DATE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Calculate stranding risk based on sector benchmarks
+    UPDATE esg.portfolio_exposure pe
+    SET
+        stranding_risk = CASE
+            WHEN s.risk_category = 'High' THEN 0.7
+            WHEN s.risk_category = 'Medium' THEN 0.4
+            ELSE 0.1
+        END,
+        transition_risk_score = CASE
+            WHEN s.risk_category = 'High' THEN carbon_intensity * 0.8
+            WHEN s.risk_category = 'Medium' THEN carbon_intensity * 0.5
+            ELSE carbon_intensity * 0.2
+        END
+    FROM
+        esg.sector_benchmarks s
+    WHERE
+        pe.scenario_id = p_scenario_id
+        AND pe.sector = s.sector_name
+        AND pe.analysis_date = p_as_of_date;
+
+    -- Refresh materialized view
+    REFRESH MATERIALIZED VIEW esg.mv_transition_risk_summary;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_calculate_transition_risk IS 'Computes transition risk metrics for portfolio exposures based on sector benchmarks and scenario parameters';
+
+
+-- ESG Controversy Monitoring System
+--Business Case: Companies must track and respond to ESG-related controversies that could impact reputation and stock price.
+CREATE TABLE esg.controversy_types (
+    type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(100) NOT NULL,
+    severity_level VARCHAR(20) CHECK (severity_level IN ('Minor', 'Moderate', 'Major', 'Critical')),
+    common_sources TEXT,
+    response_protocol TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.controversy_incidents (
+    incident_id SERIAL PRIMARY KEY,
+    type_id INTEGER REFERENCES esg.controversy_types(type_id),
+    incident_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    source_url VARCHAR(500),
+    affected_entities TEXT[],
+    severity_rating INTEGER CHECK (severity_rating BETWEEN 1 AND 10),
+    stock_impact DECIMAL(5,2), -- Percentage change
+    media_coverage INTEGER, -- Number of articles
+    status VARCHAR(20) CHECK (status IN ('Active', 'Contained', 'Resolved', 'Litigation')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.controversy_responses (
+    response_id SERIAL PRIMARY KEY,
+    incident_id INTEGER REFERENCES esg.controversy_incidents(incident_id),
+    response_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    response_type VARCHAR(50) CHECK (response_type IN ('Statement', 'Policy Change', 'Remediation', 'Settlement')),
+    response_text TEXT,
+    response_url VARCHAR(500),
+    effectiveness INTEGER CHECK (effectiveness BETWEEN 1 AND 5),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.controversy_types IS 'Catalog of potential ESG controversy types with severity classifications';
+COMMENT ON TABLE esg.controversy_incidents IS 'Tracks actual ESG controversy events with impact metrics';
+COMMENT ON TABLE esg.controversy_responses IS 'Records organizational responses to ESG controversies';
+
+CREATE OR REPLACE VIEW esg.vw_controversy_impact AS
+SELECT
+    ci.incident_id,
+    ct.type_name,
+    ci.incident_date,
+    ci.title,
+    ci.severity_rating,
+    ci.stock_impact,
+    ci.media_coverage,
+    cr.response_type,
+    cr.effectiveness,
+    CASE
+        WHEN ci.status = 'Resolved' AND cr.effectiveness >= 4 THEN 'Well Managed'
+        WHEN ci.status = 'Active' AND ci.severity_rating >= 7 THEN 'Critical Situation'
+        WHEN ci.media_coverage > 100 THEN 'High Visibility'
+        ELSE 'Standard'
+    END AS impact_category
+FROM
+    esg.controversy_incidents ci
+JOIN
+    esg.controversy_types ct ON ci.type_id = ct.type_id
+LEFT JOIN
+    esg.controversy_responses cr ON ci.incident_id = cr.incident_id
+WHERE
+    ci.incident_date >= CURRENT_DATE - INTERVAL '1 year';
+
+COMMENT ON VIEW esg.vw_controversy_impact IS 'Analyzes ESG controversies by impact level and response effectiveness';
+
+CREATE OR REPLACE PROCEDURE esg.sp_monitor_controversies()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Flag controversies needing immediate attention
+    UPDATE esg.controversy_incidents
+    SET status = 'Critical'
+    WHERE severity_rating >= 8
+    AND status NOT IN ('Resolved', 'Litigation')
+    AND NOT EXISTS (
+        SELECT 1 FROM esg.controversy_responses
+        WHERE incident_id = esg.controversy_incidents.incident_id
+    );
+
+    -- Generate alerts for high media coverage
+    INSERT INTO esg.notifications (notification_type, message, priority)
+    SELECT
+        'Controversy Alert',
+        'High media coverage (' || media_coverage || ' articles) for: ' || title,
+        CASE
+            WHEN severity_rating >= 7 THEN 'Critical'
+            ELSE 'High'
+        END
+    FROM
+        esg.controversy_incidents
+    WHERE
+        media_coverage > 50
+        AND created_at >= CURRENT_TIMESTAMP - INTERVAL '1 day';
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_monitor_controversies IS 'Automatically flags high-risk ESG controversies and generates alerts for rapid response';
+
+
+-- ESG Data Marketplace Integration
+--Business Case: Organizations need to aggregate ESG data from multiple providers (MSCI, Sustainalytics, Bloomberg) into a unified model.
+
+CREATE TABLE esg.data_providers (
+    provider_id SERIAL PRIMARY KEY,
+    provider_name VARCHAR(100) NOT NULL,
+    coverage_areas TEXT[] NOT NULL,
+    data_frequency VARCHAR(50) NOT NULL,
+    api_endpoint VARCHAR(500),
+    auth_method VARCHAR(50),
+    last_sync TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.external_esg_data (
+    data_id SERIAL PRIMARY KEY,
+    provider_id INTEGER REFERENCES esg.data_providers(provider_id),
+    entity_id VARCHAR(100) NOT NULL, -- ISIN, LEI, or internal ID
+    entity_name VARCHAR(200) NOT NULL,
+    metric_name VARCHAR(100) NOT NULL,
+    metric_value DECIMAL(15,2),
+    metric_date DATE NOT NULL,
+    confidence_score DECIMAL(5,2) CHECK (confidence_score BETWEEN 0 AND 1),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_provider_metric UNIQUE (provider_id, entity_id, metric_name, metric_date)
+);
+
+CREATE TABLE esg.data_normalization_rules (
+    rule_id SERIAL PRIMARY KEY,
+    internal_metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    provider_metric_name VARCHAR(100) NOT NULL,
+    transformation_rule TEXT NOT NULL,
+    provider_id INTEGER REFERENCES esg.data_providers(provider_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.data_providers IS 'Registry of external ESG data providers and connection details';
+COMMENT ON TABLE esg.external_esg_data IS 'Stores ESG data obtained from external providers';
+COMMENT ON TABLE esg.data_normalization_rules IS 'Defines rules for transforming provider-specific data into internal format';
+
+CREATE MATERIALIZED VIEW esg.mv_unified_esg_scores AS
+SELECT
+    e.entity_id,
+    e.entity_name,
+    pm.metric_name AS internal_metric,
+    AVG(CASE
+        WHEN pm.unit_of_measure = 'Percentage' THEN e.metric_value * 100
+        WHEN dn.transformation_rule IS NOT NULL THEN eval_expr(dn.transformation_rule, e.metric_value)
+        ELSE e.metric_value
+    END) AS normalized_value,
+    COUNT(DISTINCT e.provider_id) AS provider_count,
+    AVG(e.confidence_score) AS avg_confidence
+FROM
+    esg.external_esg_data e
+JOIN
+    esg.data_normalization_rules dn ON e.provider_id = dn.provider_id
+    AND e.metric_name = dn.provider_metric_name
+JOIN
+    esg.performance_metrics pm ON dn.internal_metric_id = pm.metric_id
+WHERE
+    e.metric_date >= CURRENT_DATE - INTERVAL '1 year'
+GROUP BY
+    e.entity_id, e.entity_name, pm.metric_name
+WITH DATA;
+
+COMMENT ON MATERIALIZED VIEW esg.mv_unified_esg_scores IS 'Consolidates and normalizes ESG data from multiple providers into comparable metrics';
+
+CREATE OR REPLACE PROCEDURE esg.sp_sync_provider_data(
+    p_provider_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_endpoint VARCHAR(500);
+    v_auth_method VARCHAR(50);
+BEGIN
+    -- Get provider API details
+    SELECT api_endpoint, auth_method INTO v_endpoint, v_auth_method
+    FROM esg.data_providers
+    WHERE provider_id = p_provider_id;
+
+    -- Placeholder for actual API integration  (to do -- modify this --Awase)
+    -- In practice, this would:
+    -- 1. Authenticate with provider
+    -- 2. Fetch latest data
+    -- 3. Transform according to normalization rules
+    -- 4. Store in external_esg_data
+
+    -- Update sync timestamp
+    UPDATE esg.data_providers
+    SET last_sync = CURRENT_TIMESTAMP
+    WHERE provider_id = p_provider_id;
+
+    -- Refresh unified view
+    REFRESH MATERIALIZED VIEW esg.mv_unified_esg_scores;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_sync_provider_data IS 'Synchronizes ESG data from external providers and normalizes into internal format';
+
+-- ESG--linked Compensation Analytics
+-- Business Case: Companies are increasingly tying executive compensation to ESG performance metrics and need robust tracking.
+CREATE TABLE esg.compensation_plans (
+    plan_id SERIAL PRIMARY KEY,
+    plan_name VARCHAR(100) NOT NULL,
+    target_group VARCHAR(50) CHECK (target_group IN ('Executives', 'Management', 'All Employees')),
+    effective_date DATE NOT NULL,
+    expiry_date DATE,
+    performance_period VARCHAR(50) NOT NULL, -- 'Annual', 'Multi-Year'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.compensation_metrics (
+    metric_link_id SERIAL PRIMARY KEY,
+    plan_id INTEGER REFERENCES esg.compensation_plans(plan_id),
+    metric_id INTEGER REFERENCES esg.performance_metrics(metric_id),
+    weight DECIMAL(5,2) CHECK (weight BETWEEN 0 AND 1),
+    threshold_value DECIMAL(15,2),
+    target_value DECIMAL(15,2),
+    stretch_value DECIMAL(15,2),
+    payout_curve TEXT, -- JSON defining payout formula
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.compensation_outcomes (
+    outcome_id SERIAL PRIMARY KEY,
+    plan_id INTEGER REFERENCES esg.compensation_plans(plan_id),
+    employee_id VARCHAR(50) NOT NULL,
+    assessment_date DATE NOT NULL,
+    base_salary DECIMAL(15,2),
+    total_potential_payout DECIMAL(15,2),
+    actual_payout DECIMAL(15,2),
+    payout_percentage DECIMAL(5,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.compensation_metric_results (
+    result_id SERIAL PRIMARY KEY,
+    outcome_id INTEGER REFERENCES esg.compensation_outcomes(outcome_id),
+    metric_link_id INTEGER REFERENCES esg.compensation_metrics(metric_link_id),
+    actual_value DECIMAL(15,2),
+    target_value DECIMAL(15,2),
+    performance_percentage DECIMAL(5,2),
+    weighted_contribution DECIMAL(5,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.compensation_plans IS 'Defines ESG-linked compensation programs and their parameters';
+COMMENT ON TABLE esg.compensation_metrics IS 'Links ESG performance metrics to compensation plans with weighting';
+COMMENT ON TABLE esg.compensation_outcomes IS 'Records actual compensation outcomes tied to ESG performance';
+COMMENT ON TABLE esg.compensation_metric_results IS 'Detailed results of individual metric performance for compensation calculations';
+
+CREATE OR REPLACE VIEW esg.vw_esg_payout_analysis AS
+SELECT
+    cp.plan_name,
+    cp.target_group,
+    co.employee_id,
+    co.assessment_date,
+    co.base_salary,
+    co.total_potential_payout,
+    co.actual_payout,
+    co.payout_percentage,
+    STRING_AGG(pm.metric_name || ': ' || ROUND(cmr.performance_percentage, 1) || '%', ', ' ORDER BY cm.weight DESC) AS metric_performance,
+    SUM(cmr.weighted_contribution) AS calculated_payout_percentage,
+    co.actual_payout - (co.total_potential_payout * SUM(cmr.weighted_contribution) / 100) AS variance
+FROM
+    esg.compensation_outcomes co
+JOIN
+    esg.compensation_plans cp ON co.plan_id = cp.plan_id
+JOIN
+    esg.compensation_metric_results cmr ON co.outcome_id = cmr.outcome_id
+JOIN
+    esg.compensation_metrics cm ON cmr.metric_link_id = cm.metric_link_id
+JOIN
+    esg.performance_metrics pm ON cm.metric_id = pm.metric_id
+GROUP BY
+    cp.plan_name, cp.target_group, co.employee_id, co.assessment_date,
+    co.base_salary, co.total_potential_payout, co.actual_payout, co.payout_percentage;
+
+COMMENT ON VIEW esg.vw_esg_payout_analysis IS 'Analyzes actual compensation payouts against ESG performance metrics to identify variances';
+
+CREATE OR REPLACE PROCEDURE esg.sp_calculate_esg_payouts(
+    p_plan_id INTEGER,
+    p_assessment_date DATE
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payout_curve JSON;
+    v_metric_record RECORD;
+    v_performance_pct DECIMAL(5,2);
+    v_weighted_total DECIMAL(5,2) := 0;
+    v_employee_id VARCHAR(50);
+BEGIN
+    -- Create outcome records for all plan participants
+    FOR v_employee_id IN
+        SELECT employee_id FROM hr.employees
+        WHERE employee_type = (SELECT target_group FROM esg.compensation_plans WHERE plan_id = p_plan_id)
+    LOOP
+        -- Insert base outcome record
+        INSERT INTO esg.compensation_outcomes (
+            plan_id, employee_id, assessment_date, base_salary, total_potential_payout
+        )
+        VALUES (
+            p_plan_id,
+            v_employee_id,
+            p_assessment_date,
+            (SELECT base_salary FROM hr.employee_compensation WHERE employee_id = v_employee_id),
+            (SELECT esg_bonus_potential FROM hr.employee_compensation WHERE employee_id = v_employee_id)
+        )
+        RETURNING outcome_id INTO v_outcome_id;
+
+        -- Calculate performance for each metric
+        FOR v_metric_record IN
+            SELECT
+                cm.metric_link_id,
+                cm.metric_id,
+                cm.weight,
+                cm.threshold_value,
+                cm.target_value,
+                cm.stretch_value,
+                cm.payout_curve
+            FROM
+                esg.compensation_metrics cm
+            WHERE
+                cm.plan_id = p_plan_id
+        LOOP
+            -- Get actual performance value
+            SELECT actual_value INTO v_actual_value
+            FROM esg.performance_data
+            WHERE metric_id = v_metric_record.metric_id
+            AND reporting_period = p_assessment_date
+            LIMIT 1;
+
+            -- Calculate performance percentage
+            v_performance_pct := CASE
+                WHEN v_actual_value <= v_metric_record.threshold_value THEN 0
+                WHEN v_actual_value >= v_metric_record.stretch_value THEN 150
+                ELSE 100 * (v_actual_value - v_metric_record.threshold_value) /
+                     (v_metric_record.target_value - v_metric_record.threshold_value)
+            END;
+
+            -- Store metric result
+            INSERT INTO esg.compensation_metric_results (
+                outcome_id, metric_link_id, actual_value, target_value,
+                performance_percentage, weighted_contribution
+            )
+            VALUES (
+                v_outcome_id, v_metric_record.metric_link_id, v_actual_value,
+                v_metric_record.target_value, v_performance_pct,
+                v_performance_pct * v_metric_record.weight
+            );
+
+            v_weighted_total := v_weighted_total + (v_performance_pct * v_metric_record.weight);
+        END LOOP;
+
+        -- Update outcome with final payout calculation
+        UPDATE esg.compensation_outcomes
+        SET
+            payout_percentage = v_weighted_total,
+            actual_payout = total_potential_payout * LEAST(v_weighted_total, 150) / 100
+        WHERE
+            outcome_id = v_outcome_id;
+    END LOOP;
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_calculate_esg_payouts IS 'Calculates compensation payouts based on ESG performance against targets and payout curves';
+
+
+-- ESG AI Governance Framework
+-- Business case: : Organizations using AI for ESG analytics need to ensure models are fair, transparent, and aligned with ESG principles
+
+CREATE TABLE esg.ai_models (
+    model_id SERIAL PRIMARY KEY,
+    model_name VARCHAR(100) NOT NULL,
+    model_purpose TEXT NOT NULL,
+    model_type VARCHAR(50) CHECK (model_type IN ('Predictive', 'Classification', 'Optimization', 'Generative')),
+    deployment_date DATE,
+    input_data_sources TEXT[],
+    output_metrics TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.ai_model_audits (
+    audit_id SERIAL PRIMARY KEY,
+    model_id INTEGER REFERENCES esg.ai_models(model_id),
+    audit_date DATE NOT NULL,
+    auditor VARCHAR(100) NOT NULL,
+    fairness_score DECIMAL(5,2) CHECK (fairness_score BETWEEN 0 AND 1),
+    transparency_score DECIMAL(5,2) CHECK (transparency_score BETWEEN 0 AND 1),
+    alignment_score DECIMAL(5,2) CHECK (alignment_score BETWEEN 0 AND 1),
+    bias_metrics JSONB,
+    performance_metrics JSONB,
+    recommendations TEXT,
+    status VARCHAR(20) CHECK (status IN ('Approved', 'Conditional', 'Rejected', 'Remediation')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esg.ai_model_deployments (
+    deployment_id SERIAL PRIMARY KEY,
+    model_id INTEGER REFERENCES esg.ai_models(model_id),
+    environment VARCHAR(50) CHECK (environment IN ('Development', 'Staging', 'Production')),
+    version VARCHAR(50) NOT NULL,
+    deployment_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    rollback_procedure TEXT,
+    monitoring_frequency VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE esg.ai_models IS 'Registry of AI models used for ESG analytics with purpose and specifications';
+COMMENT ON TABLE esg.ai_model_audits IS 'Records audits of AI models for fairness, transparency, and ESG alignment';
+COMMENT ON TABLE esg.ai_model_deployments IS 'Tracks deployment history and environments for ESG AI models';
+
+CREATE OR REPLACE VIEW esg.vw_ai_governance_status AS
+SELECT
+    m.model_name,
+    m.model_type,
+    d.environment,
+    d.version,
+    a.audit_date,
+    ROUND((a.fairness_score + a.transparency_score + a.alignment_score) / 3, 2) AS overall_esg_score,
+    a.status AS audit_status,
+    CASE
+        WHEN (a.fairness_score + a.transparency_score + a.alignment_score) / 3 >= 0.8 THEN 'High Confidence'
+        WHEN (a.fairness_score + a.transparency_score + a.alignment_score) / 3 >= 0.6 THEN 'Moderate Confidence'
+        ELSE 'Low Confidence'
+    END AS usage_recommendation,
+    d.deployment_date
+FROM
+    esg.ai_models m
+JOIN
+    esg.ai_model_deployments d ON m.model_id = d.model_id
+LEFT JOIN
+    (SELECT model_id, audit_date, fairness_score, transparency_score, alignment_score, status
+     FROM esg.ai_model_audits
+     WHERE audit_date = (SELECT MAX(audit_date) FROM esg.ai_model_audits a2
+                        WHERE a2.model_id = esg.ai_model_audits.model_id)) a
+    ON m.model_id = a.model_id
+WHERE
+    d.environment = 'Production';
+
+COMMENT ON VIEW esg.vw_ai_governance_status IS 'Provides a comprehensive view of AI model governance status for ESG compliance';
+
+CREATE OR REPLACE PROCEDURE esg.sp_conduct_ai_audit(
+    p_model_id INTEGER,
+    p_auditor VARCHAR(100)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_fairness_score DECIMAL(5,2);
+    v_transparency_score DECIMAL(5,2);
+    v_alignment_score DECIMAL(5,2);
+    v_bias_metrics JSONB;
+    v_performance_metrics JSONB;
+    v_recommendations TEXT;
+BEGIN
+    -- Placeholder for actual audit logic
+    -- In practice, this would:
+    -- 1. Run fairness tests on model outputs
+    -- 2. Evaluate explainability/transparency
+    -- 3. Assess alignment with ESG principles
+    -- 4. Generate recommendations
+
+    -- For demonstration, using simplified scoring
+    v_fairness_score := 0.7 + random() * 0.3;
+    v_transparency_score := 0.6 + random() * 0.4;
+    v_alignment_score := 0.8 + random() * 0.2;
+
+    v_bias_metrics := jsonb_build_object(
+        'demographic_parity', 0.85,
+        'equal_opportunity', 0.92,
+        'disparate_impact', 1.08
+    );
+
+    v_performance_metrics := jsonb_build_object(
+        'accuracy', 0.88,
+        'precision', 0.91,
+        'recall', 0.85,
+        'f1_score', 0.88
+    );
+
+    v_recommendations := CASE
+        WHEN v_fairness_score < 0.7 THEN 'Implement bias mitigation techniques'
+        WHEN v_transparency_score < 0.7 THEN 'Enhance model documentation and explainability'
+        ELSE 'No major remediation required'
+    END;
+
+    -- Record audit results
+    INSERT INTO esg.ai_model_audits (
+        model_id, audit_date, auditor, fairness_score, transparency_score,
+        alignment_score, bias_metrics, performance_metrics, recommendations,
+        status
+    )
+    VALUES (
+        p_model_id, CURRENT_DATE, p_auditor, v_fairness_score, v_transparency_score,
+        v_alignment_score, v_bias_metrics, v_performance_metrics, v_recommendations,
+        CASE
+            WHEN (v_fairness_score + v_transparency_score + v_alignment_score) / 3 >= 0.7 THEN 'Approved'
+            WHEN (v_fairness_score + v_transparency_score + v_alignment_score) / 3 >= 0.5 THEN 'Conditional'
+            ELSE 'Remediation'
+        END
+    );
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_conduct_ai_audit IS 'Performs comprehensive audit of AI models used for ESG analytics against fairness, transparency and alignment criteria';
+
+-- integration
+-- Example integration with financial systems for transition risk
+CREATE FOREIGN TABLE finance.portfolio_holdings (
+    asset_id VARCHAR(50),
+    asset_class VARCHAR(50),
+    sector VARCHAR(50),
+    market_value DECIMAL(15,2),
+    currency VARCHAR(3)
+) SERVER finance_system;
+
+-- Create unified view of financial and ESG data
+CREATE VIEW esg.vw_portfolio_esg_risk AS
+SELECT
+    p.asset_id,
+    p.asset_class,
+    p.sector,
+    p.market_value,
+    e.transition_risk_score,
+    e.carbon_intensity,
+    e.stranding_risk * p.market_value AS potential_value_at_risk
+FROM
+    finance.portfolio_holdings p
+JOIN
+    esg.mv_transition_risk_summary e ON p.sector = e.sector
+WHERE
+    e.scenario_name = 'Net Zero 2050';
+
+
+-- performance optimization
+-- Add indexes for new tables
+CREATE INDEX idx_portfolio_exposure_scenario ON esg.portfolio_exposure(scenario_id, analysis_date);
+CREATE INDEX idx_controversy_incidents_date ON esg.controversy_incidents(incident_date);
+CREATE INDEX idx_external_data_entity ON esg.external_esg_data(entity_id, metric_date);
+CREATE INDEX idx_ai_audits_model ON esg.ai_model_audits(model_id, audit_date);
+
+-- Partition large tables
+CREATE TABLE esg.controversy_incidents_partitioned (
+    LIKE esg.controversy_incidents INCLUDING INDEXES
+) PARTITION BY RANGE (incident_date);
+
+CREATE TABLE esg.controversy_incidents_2023 PARTITION OF esg.controversy_incidents_partitioned
+    FOR VALUES FROM ('2025-01-01') TO ('2025-06-01');
+
+
+--maintenance procedure
+CREATE OR REPLACE PROCEDURE esg.sp_maintain_esg_data()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Refresh all materialized views
+    REFRESH MATERIALIZED VIEW esg.mv_transition_risk_summary;
+    REFRESH MATERIALIZED VIEW esg.mv_unified_esg_scores;
+
+    -- Sync data from providers
+    CALL esg.sp_sync_provider_data(1); -- MSCI
+    CALL esg.sp_sync_provider_data(2); -- Sustainalytics
+    CALL esg.sp_sync_provider_data(3); -- Bloomberg
+
+    -- Monitor for controversies
+    CALL esg.sp_monitor_controversies();
+
+    -- Audit AI models on schedule
+    PERFORM esg.sp_conduct_ai_audit(model_id, 'Scheduled Audit')
+    FROM esg.ai_models
+    WHERE model_id IN (
+        SELECT model_id FROM esg.ai_model_deployments
+        WHERE environment = 'Production'
+        AND deployment_date >= CURRENT_DATE - INTERVAL '6 months'
+    );
+END;
+$$;
+
+COMMENT ON PROCEDURE esg.sp_maintain_esg_data IS 'Orchestrates regular maintenance tasks for ESG data and analytics';
 
 ----------------------
 -- -- Data Ingestion Framework
