@@ -1,0 +1,3 @@
+--Copyright 2025  β ORI Inc. Canada Aug 2025. All Rights Reserved.
+-- β SycliQ Prognostix - Universal Predictive Analytics Platform for the Enterprise 
+-- Author: Awase Khirni Syed 
