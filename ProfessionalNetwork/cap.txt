@@ -1,0 +1,17 @@
+--#culture analytics platform based on https://www.uab.edu/news/research-innovation/business-professors-develop-model-of-workplace-bullying
+--#Culture Analytics Platform 
+--#Copyright 2025  β ORI Inc. Canada
+--#Author: Awase Khirni Syed Ph.D. 
+--# A world-class enterprise platform to derive culture insights prior to joining any organization--
+--# "Glassdoors can be tinted to obscure the view- not because the powerful fear being seen, but because they choose who sees what lies behind the viel of influence"
+--# version 1.0 Dat3 :30/June/2025
+--# Features 
+--# 1. Advanced Survey Module for complete suvery lifecycle management 
+--# 2. Sentiment Analysis, theme extraction and toxicity scoring 
+--# 3. organizational network analysis (ONA) to identify communication pattern mapping and network metrics 
+--# 4. predictive analytics to compute risk, forecast using ml 
+--# 5. industrial comparison and competitor analysis -- benchmarking framework 
+--# 6. Intervention Management -- program tracking with ROI measurement 
+--# 7. Enhanced Data Governance-- comprehensive data dictionary, quality rules, and lineage tracking 
+--# 8. Advanced Security: Row-level security, PII auditing and compliance monitoring 
+
