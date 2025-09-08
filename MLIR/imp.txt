@@ -1,0 +1,5 @@
+brew install bazel
+https://www.jeremykun.com/2023/08/10/mlir-getting-started/
+https://github.com/bazelbuild/starlark/
+https://github.com/bazelbuild/bazelisk
+https://github.com/j2kun/mlir-tutorial?tab=readme-ov-file
