@@ -1,3 +1,66 @@
 # Copyright 2025 β ORI Inc. Canada All Rights Reserved.
 #β O.P.E.R.A - Operations Performance & Event Resolution Analytics
 In house - enterprise application for operations performance platform delivering visibility and actionable intelligence across the entire incident lifecycle
+Module 1: Incident Intelligence Engine (IIE) List of Tables 
+ iie.raw_events
+ iie.raw_events_current
+ iie.raw_events_next_1
+ iie.raw_events_next_2
+ iie.enriched_events
+ iie.correlated_incidents
+ iie.incident_correlations
+ iie.ml_models 
+ iie.model_feedback_log
+ iie.incident_response_actions 
+ iie.service_dependencies
+ iie.model_performance_metrics
+ iie.model_metrics_current
+ iie.model_metrics_next_1
+ iie.model_metrics_next_2
+ iie.model_metrics_default
+ iie.causal_graph_nodes
+ iie.causal_graph_edges
+ iie.rca_sessions
+ iie.rca_evidence
+ iie.rca_hypotheses
+ iie.bayesian_network_params
+ iie.historical_root_causes
+ iie.model_training_jobs
+ iie.model_deployments
+ iie.drift_detection_results 
+ iie.ab_test_experiments
+ iie.ab_test_results 
+ iie.performance_regression_alerts
+ iie.model_pipeline_config
+ iie.response_teams
+ iie.team_members
+ iie.incident_handoffs
+ iie.routing_rules
+ iie.team_fatigue_metrics
+ iie.escalation_policies
+ iie.capacity_forecast_models 
+ iie.forecast_results
+ iie.seasonal_patterns
+ iie.business_impact_scenarios
+ iie.resource_capacity_projections
+ iie.anomaly_detection_results
+
+2	Event Ingestion Framework
+3	Data Quality Framework
+4	Data Governance Module
+5	Data Dictionary & Metadata Repository
+6	Data Lifecycle Management
+7	Analytics Platform Core
+8	KPI & Success Metrics Framework
+9	Role-Based Access Control (RBAC) & Identity Integration
+10	AI/ML Orchestration Layer
+11	Workflow Automation Engine
+12	Real-Time Observability Hub
+13	Visitor & User Behavior Analytics
+14	Post-Incident Review (PIR) Automation
+15	Service Dependency Mapping
+16	Predictive Analytics Module
+17	Prescriptive Analytics Engine
+18	Knowledge Graph & Contextual Intelligence
+19	Communication Orchestration Layer
+20	Executive Insights & Strategic Dashboards
