@@ -30,6 +30,8 @@ CREATE EXTENSION IF NOT EXISTS "ltree";
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 
+
+
 CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -6256,3 +6258,256 @@ LEFT JOIN content_performance_metrics pm ON c.content_id = pm.content_id
 WHERE c.status = 'published'
 ORDER BY final_score DESC
 LIMIT 100;
+
+
+--- Enhancements -- Awase
+
+-- =============================================================================
+-- 1. ENHANCE users TABLE FOR SECURITY & LIFECYCLE
+-- Add MFA, login tracking, and soft-delete consistency
+-- =============================================================================
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS lockout_until TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS recovery_codes_used INTEGER DEFAULT 0;
+
+COMMENT ON COLUMN users.is_deleted IS 'Soft delete flag; set to TRUE upon account deactivation per GDPR';
+COMMENT ON COLUMN users.last_login_at IS 'Timestamp of most recent successful login';
+COMMENT ON COLUMN users.failed_login_attempts IS 'Counter for consecutive failed login attempts';
+COMMENT ON COLUMN users.lockout_until IS 'If account temporarily locked due to failed attempts';
+COMMENT ON COLUMN users.mfa_enabled IS 'Indicates whether multi-factor authentication is enabled';
+COMMENT ON COLUMN users.recovery_codes_used IS 'Number of one-time recovery codes already consumed';
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_users_is_deleted ON users(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login_at) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_users_lockout ON users(lockout_until) WHERE lockout_until IS NOT NULL;
+
+-- =============================================================================
+-- 2. CREATE user_sessions TABLE
+-- Track authenticated sessions for security, revocation, and audit
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    session_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    ip_address INET NOT NULL,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    auth_method VARCHAR(20) NOT NULL CHECK (auth_method IN ('password', 'mfa_token', 'oauth', 'recovery_code'))
+);
+
+CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_created_at ON user_sessions(created_at);
+CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
+CREATE INDEX idx_user_sessions_active ON user_sessions(is_active) WHERE is_active = TRUE;
+
+COMMENT ON TABLE user_sessions IS 'Stores active and expired user sessions for audit, revocation, and anomaly detection';
+COMMENT ON COLUMN user_sessions.auth_method IS 'Authentication method used to establish this session';
+
+-- =============================================================================
+-- 3. CREATE security_events TABLE
+-- Log failed logins, brute force, geo anomalies
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS security_events (
+    event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    event_type VARCHAR(50) NOT NULL,
+    ip_address INET NOT NULL,
+    user_agent TEXT,
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_security_events_ip ON security_events(ip_address);
+CREATE INDEX idx_security_events_type ON security_events(event_type);
+CREATE INDEX idx_security_events_time ON security_events(created_at DESC);
+CREATE INDEX idx_security_events_user ON security_events(user_id) WHERE user_id IS NOT NULL;
+
+COMMENT ON TABLE security_events IS 'Logs security-related events such as failed logins, lockouts, and suspicious activity';
+
+-- =============================================================================
+-- 4. APPLY SOFT DELETE TO CORE TABLES
+-- Ensure consistent lifecycle management
+-- =============================================================================
+
+-- Apply to key tables
+DO $$ DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['content', 'direct_messages', 'groups', 'investigations'] LOOP
+        EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE', t);
+        EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%s_is_deleted ON %I(is_deleted)', t, t);
+    END LOOP;
+END $$;
+
+-- =============================================================================
+-- 5. CREATE notifications TABLE
+-- Central notification engine for real-time alerts
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL, -- 'comment_reply', 'moderation_decision', etc.
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    link_url TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP WITH TIME ZONE,
+    related_content_id UUID REFERENCES content(content_id),
+    related_user_id UUID REFERENCES users(user_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+CREATE INDEX idx_notifications_unread ON notifications(user_id, is_read) WHERE is_read = FALSE;
+CREATE INDEX idx_notifications_created ON notifications(created_at DESC);
+
+COMMENT ON TABLE notifications IS 'Stores user-facing notifications for engagement and moderation updates';
+
+-- =============================================================================
+-- 6. CREATE remote_follows TABLE
+-- Track bidirectional federation state with ActivityPub peers
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS remote_follows (
+    follow_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    local_user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    remote_actor_uri TEXT NOT NULL, -- e.g., https://mastodon.social/users/alice
+    instance_domain TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'following', 'rejected', 'blocked')),
+    inbox_url TEXT NOT NULL,
+    followed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_delivery_attempt TIMESTAMP WITH TIME ZONE,
+    last_delivery_status VARCHAR(20),
+    UNIQUE (local_user_id, remote_actor_uri)
+);
+
+CREATE INDEX idx_remote_follows_user ON remote_follows(local_user_id);
+CREATE INDEX idx_remote_follows_domain ON remote_follows(instance_domain);
+CREATE INDEX idx_remote_follows_status ON remote_follows(status);
+
+COMMENT ON TABLE remote_follows IS 'Tracks outgoing follows to remote ActivityPub accounts including delivery metadata';
+
+-- =============================================================================
+-- 7. ENABLE FULL-TEXT SEARCH ON CONTENT
+-- Add tsvector column and index for fast search
+-- =============================================================================
+
+ALTER TABLE content
+ADD COLUMN IF NOT EXISTS search_vector TSVECTOR;
+
+-- Populate and maintain search vector
+UPDATE content
+SET search_vector = to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(body, ''));
+
+-- Create GIN index
+CREATE INDEX IF NOT EXISTS idx_content_search ON content USING GIN(search_vector);
+
+-- Trigger to auto-update on changes
+CREATE OR REPLACE FUNCTION update_search_vector()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.search_vector := to_tsvector('english', COALESCE(NEW.title, '') || ' ' || COALESCE(NEW.body, ''));
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_content_search_update ON content;
+CREATE TRIGGER trg_content_search_update
+    BEFORE INSERT OR UPDATE ON content
+    FOR EACH ROW EXECUTE FUNCTION update_search_vector();
+
+COMMENT ON COLUMN content.search_vector IS 'Full-text search vector using English dictionary';
+
+-- =============================================================================
+-- 8. ADD MULTILINGUAL SUPPORT
+-- Extend content_translations with versioning
+-- =============================================================================
+
+-- Add language display name and RTL support
+ALTER TABLE content_translations
+ADD COLUMN IF NOT EXISTS language_name VARCHAR(50),
+ADD COLUMN IF NOT EXISTS is_rtl BOOLEAN DEFAULT FALSE;
+
+-- Index for performance
+CREATE INDEX IF NOT EXISTS idx_content_translations_lang ON content_translations(language);
+CREATE INDEX IF NOT EXISTS idx_content_translations_content ON content_translations(content_id);
+
+-- =============================================================================
+-- 9. IMPROVE MODERATION WORKFLOW
+-- Add escalation path and audit trail
+-- =============================================================================
+
+-- Add escalation fields to moderation_proposals
+ALTER TABLE moderation_proposals
+ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS escalated_by UUID REFERENCES users(user_id),
+ADD COLUMN IF NOT EXISTS resolution_notes TEXT;
+
+-- Add moderator notes to moderation_actions
+ALTER TABLE moderation_actions
+ADD COLUMN IF NOT EXISTS internal_notes TEXT;
+
+-- =============================================================================
+-- 10. CREATE data_retention_logs TABLE
+-- Prove compliance with retention policies
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS data_retention_logs (
+    log_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    policy_id UUID NOT NULL REFERENCES data_retention_policies(policy_id),
+    table_name VARCHAR(100) NOT NULL,
+    records_affected INTEGER NOT NULL,
+    action_taken VARCHAR(50) NOT NULL, -- 'archived', 'anonymized', 'deleted'
+    execution_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    executed_by UUID REFERENCES users(user_id),
+    details JSONB
+);
+
+CREATE INDEX idx_retention_logs_policy ON data_retention_logs(policy_id);
+CREATE INDEX idx_retention_logs_time ON data_retention_logs(execution_time DESC);
+
+COMMENT ON TABLE data_retention_logs IS 'Audit log of data retention policy executions for compliance reporting';
+
+-- =============================================================================
+-- 11. FINALIZE TRIGGERS AND FUNCTIONS
+-- Reapply updated_at triggers to new tables
+-- =============================================================================
+
+-- Ensure function exists
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach to new tables
+DO $$ DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['user_sessions', 'security_events', 'notifications', 'remote_follows'] LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS update_%s_timestamp ON %I', t, t);
+        EXECUTE format('CREATE TRIGGER update_%s_timestamp
+                        BEFORE UPDATE ON %I
+                        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t, t);
+    END LOOP;
+END $$;
+
+-- =============================================================================
+-- 12. RECORD SCHEMA CHANGE
+-- Maintain migration traceability
+-- =============================================================================
+
+INSERT INTO database_migrations (migration_name, batch, executed_at)
+VALUES ('schema_enhancements_final_security_notifications_federation', 1, NOW())
+ON CONFLICT (migration_name) DO NOTHING;
