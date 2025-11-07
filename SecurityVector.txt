@@ -34,3 +34,15 @@ providing 24/7 monitoring, threat hunting, and incident response with the AI han
 islamophobia, right wing extremism
 
 Security Vector is designed for all, individuals, small, mid and large enterprises across all sectors irrespective of the industry.
+
+Anomaly detection 
+threat hunting
+phishing/malware classification 
+automated triage & alert prioritizaiton 
+User behaviour analytics (UEBA)
+log correlation and enrichment 
+predictive risk modelling 
+nlp for threat intel 
+model robustness under adversarial conditions
+SOC workflows
+SOC SPOC
