@@ -4,13 +4,13 @@
 -- Copyright 2025 All rights reserved β ORI Inc.
 -- Created: 2025-04-15
 -- Last Updated: 2025-04-15
---Author: Awase Khirni Syed 
+--Author: Awase Khirni Syed
 -- Description: Comprehensive schema for a Facebook-like social networking platform
 --              with advanced features for data governance, analytics, and compliance
 -- =============================================
--- Todo more 
---- Activitypub integration 
--- views, materialize views 
+-- Todo more
+--- Activitypub integration
+-- views, materialize views
 -- =============================================
 -- SECTION 1: CORE TABLES
 -- =============================================
@@ -3290,11 +3290,11 @@ DECLARE
 BEGIN
     -- Get widget details
     SELECT * INTO v_widget FROM dashboard_widgets WHERE widget_id = p_widget_id;
-    
+
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Widget with ID % not found', p_widget_id;
     END IF;
-    
+
     -- Generate data based on widget type
     CASE v_widget.widget_type
         WHEN 'user_growth' THEN
@@ -3306,7 +3306,7 @@ BEGIN
                     'active_users_today', (SELECT COUNT(DISTINCT user_id) FROM user_activity_logs WHERE activity_timestamp >= CURRENT_DATE)
                 )
             );
-            
+
         WHEN 'content_metrics' THEN
             SELECT INTO v_data (
                 SELECT jsonb_build_object(
@@ -3316,7 +3316,7 @@ BEGIN
                     'comments_today', (SELECT COUNT(*) FROM posts_comments WHERE comment_time >= CURRENT_DATE)
                 )
             );
-            
+
         WHEN 'engagement_metrics' THEN
             SELECT INTO v_data (
                 SELECT jsonb_build_object(
@@ -3333,7 +3333,7 @@ BEGIN
                     )
                 )
             );
-            
+
         WHEN 'revenue_metrics' THEN
             SELECT INTO v_data (
                 SELECT jsonb_build_object(
@@ -3352,18 +3352,18 @@ BEGIN
                     )
                 )
             );
-            
+
         ELSE
             RAISE EXCEPTION 'Unknown widget type: %', v_widget.widget_type;
     END CASE;
-    
+
     -- Set expiration time
     v_expires_at := CURRENT_TIMESTAMP + (v_widget.refresh_interval * INTERVAL '1 second');
-    
+
     -- Update or insert cache
     IF EXISTS (SELECT 1 FROM widget_data_cache WHERE widget_id = p_widget_id) THEN
         UPDATE widget_data_cache
-        SET 
+        SET
             data = v_data,
             cached_at = CURRENT_TIMESTAMP,
             expires_at = v_expires_at
@@ -3380,7 +3380,7 @@ BEGIN
             v_expires_at
         );
     END IF;
-    
+
     -- Log the refresh
     INSERT INTO audit_logs (
         action_type,
@@ -3408,8 +3408,8 @@ DECLARE
     v_result JSONB := '[]'::JSONB;
     v_widget RECORD;
 BEGIN
-    FOR v_widget IN 
-        SELECT 
+    FOR v_widget IN
+        SELECT
             w.widget_id,
             w.widget_name,
             w.widget_type,
@@ -3425,12 +3425,12 @@ BEGIN
         -- Refresh data if expired or not available
         IF v_widget.cached_data IS NULL OR v_widget.expires_at < CURRENT_TIMESTAMP THEN
             CALL sp_refresh_widget_data(v_widget.widget_id);
-            
+
             SELECT data INTO v_widget.cached_data
             FROM widget_data_cache
             WHERE widget_id = v_widget.widget_id;
         END IF;
-        
+
         -- Add widget to result
         v_result := jsonb_insert(
             v_result,
@@ -3443,7 +3443,7 @@ BEGIN
             )
         );
     END LOOP;
-    
+
     RETURN v_result;
 END;
 $$;
@@ -3488,7 +3488,7 @@ CREATE TABLE notification_queue (
     CONSTRAINT fk_queue_method FOREIGN KEY (delivery_method_id) REFERENCES notification_delivery_methods(method_id) ON DELETE CASCADE
 );
 
---stored procedure 
+--stored procedure
 -- Procedure to queue notification
 CREATE OR REPLACE PROCEDURE sp_queue_notification(
     p_template_key VARCHAR,
@@ -3509,21 +3509,21 @@ BEGIN
     FROM notification_templates
     WHERE template_key = p_template_key
     AND is_active = TRUE;
-    
+
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Notification template with key % not found or inactive', p_template_key;
     END IF;
-    
+
     -- Get delivery method ID
     SELECT method_id INTO v_method_id
     FROM notification_delivery_methods
     WHERE method_type = p_delivery_method_type
     AND is_active = TRUE;
-    
+
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Delivery method with type % not found or inactive', p_delivery_method_type;
     END IF;
-    
+
     -- Insert into queue
     INSERT INTO notification_queue (
         template_id,
@@ -3541,7 +3541,7 @@ BEGIN
         p_priority,
         COALESCE(p_scheduled_at, CURRENT_TIMESTAMP)
     );
-    
+
     -- Log the action
     INSERT INTO audit_logs (
         action_type,
@@ -3577,8 +3577,8 @@ DECLARE
     key TEXT; -- Variable to hold JSONB key during iteration
 BEGIN
     -- Process pending notifications in priority order
-    FOR v_notification IN 
-        SELECT 
+    FOR v_notification IN
+        SELECT
             q.queue_id,
             q.template_id,
             q.user_id,
@@ -3608,7 +3608,7 @@ BEGIN
                 v_subject := REPLACE(v_subject, '{' || key || '}', v_notification.context_data->>key);
                 v_body := REPLACE(v_body, '{' || key || '}', v_notification.context_data->>key);
             END LOOP;
-            
+
             -- Process based on delivery method
             CASE v_notification.method_type
                 WHEN 'in_app' THEN
@@ -3627,9 +3627,9 @@ BEGIN
                         (v_notification.context_data->>'entity_id')::INTEGER,
                         CURRENT_TIMESTAMP
                     );
-                    
+
                     v_success := TRUE;
-                    
+
                 WHEN 'email' THEN
                     -- In production, this would call an email service
                     -- For now, just log that we would send an email
@@ -3649,9 +3649,9 @@ BEGIN
                             'body', v_body
                         )
                     );
-                    
+
                     v_success := TRUE;
-                    
+
                 WHEN 'push' THEN
                     -- In production, this would call a push notification service
                     -- For now, just log that we would send a push
@@ -3671,29 +3671,29 @@ BEGIN
                             'message', v_body
                         )
                     );
-                    
+
                     v_success := TRUE;
-                    
+
                 ELSE
                     v_success := FALSE;
                     v_error_message := 'Unknown delivery method: ' || v_notification.method_type;
             END CASE;
-            
+
             -- Update queue status
             IF v_success THEN
                 UPDATE notification_queue
-                SET 
+                SET
                     status = 'delivered',
                     processed_at = CURRENT_TIMESTAMP
                 WHERE queue_id = v_notification.queue_id;
             ELSE
                 UPDATE notification_queue
-                SET 
+                SET
                     status = CASE WHEN retry_count >= 3 THEN 'failed' ELSE 'retry' END,
                     processed_at = CURRENT_TIMESTAMP,
                     retry_count = retry_count + 1
                 WHERE queue_id = v_notification.queue_id;
-                
+
                 -- Log the failure
                 INSERT INTO audit_logs (
                     action_type,
@@ -3711,7 +3711,7 @@ BEGIN
                     )
                 );
             END IF;
-            
+
         EXCEPTION
             WHEN OTHERS THEN
                 -- Log the error
@@ -3732,16 +3732,16 @@ BEGIN
                         'sqlstate', SQLSTATE
                     )
                 );
-                
+
                 -- Mark as failed
                 UPDATE notification_queue
-                SET 
+                SET
                     status = 'failed',
                     processed_at = CURRENT_TIMESTAMP
                 WHERE queue_id = v_notification.queue_id;
         END;
     END LOOP;
-    
+
     -- Log the batch processing
     INSERT INTO audit_logs (action_type, action_timestamp)
     VALUES ('PROCESS_NOTIFICATION_QUEUE', CURRENT_TIMESTAMP);
@@ -3749,7 +3749,7 @@ END;
 $$;
 
 
-----webhook integrations 
+----webhook integrations
 -- Webhook endpoints
 CREATE TABLE webhook_endpoints (
     endpoint_id SERIAL PRIMARY KEY,
@@ -3800,7 +3800,7 @@ CREATE TABLE webhook_delivery_logs (
     CONSTRAINT fk_log_subscription FOREIGN KEY (subscription_id) REFERENCES webhook_subscriptions(subscription_id) ON DELETE CASCADE
 );
 
---stored procedures 
+--stored procedures
 -- Procedure to dispatch webhook event
 CREATE OR REPLACE PROCEDURE sp_dispatch_webhook_event(
     p_event_name VARCHAR,
@@ -3814,8 +3814,8 @@ DECLARE
     v_log_id BIGINT;
 BEGIN
     -- Find all active subscriptions for this event
-    FOR v_subscription IN 
-        SELECT 
+    FOR v_subscription IN
+        SELECT
             s.subscription_id,
             e.url,
             e.secret_key
@@ -3828,14 +3828,14 @@ BEGIN
     LOOP
         -- In a real implementation, this would make an HTTP request to the webhook URL
         -- For this example, we'll simulate the process and log it
-        
+
         -- Generate signature if secret key exists
         IF v_subscription.secret_key IS NOT NULL THEN
             v_signature := encode(hmac(p_payload::text, v_subscription.secret_key, 'sha256'), 'hex');
         ELSE
             v_signature := NULL;
         END IF;
-        
+
         -- Log the delivery attempt
         INSERT INTO webhook_delivery_logs (
             subscription_id,
@@ -3854,7 +3854,7 @@ BEGIN
             CURRENT_TIMESTAMP + INTERVAL '5 minutes'
         )
         RETURNING log_id INTO v_log_id;
-        
+
         -- Log the action
         INSERT INTO audit_logs (
             action_type,
@@ -3888,7 +3888,7 @@ DECLARE
     v_updated_count INTEGER := 0;
 BEGIN
     -- Process failed webhooks that are due for retry
-    FOR v_log IN 
+    FOR v_log IN
         SELECT log_id, subscription_id, payload
         FROM webhook_delivery_logs
         WHERE delivered_at IS NULL
@@ -3901,13 +3901,13 @@ BEGIN
     LOOP
         -- Simulate retry (in practice, this would make an HTTP request)
         UPDATE webhook_delivery_logs
-        SET 
+        SET
             attempt_count = attempt_count + 1,
             next_retry_at = CURRENT_TIMESTAMP + (LEAST(attempt_count, 5) * INTERVAL '5 minutes')
         WHERE log_id = v_log.log_id;
-        
+
         v_updated_count := v_updated_count + 1;
-        
+
         -- Log the retry
         INSERT INTO audit_logs (
             action_type,
@@ -3925,7 +3925,7 @@ BEGIN
             )
         );
     END LOOP;
-    
+
     -- Log the batch processing
     INSERT INTO audit_logs (
         action_type,
@@ -3950,7 +3950,7 @@ INSERT INTO webhook_events (event_name, description) VALUES
 ('moderation.action', 'Triggered when a moderation action occurs');
 
 
---Real-time chat analytics 
+--Real-time chat analytics
 -- Chat quality metrics
 CREATE TABLE chat_quality_metrics (
     metric_id SERIAL PRIMARY KEY,
@@ -3987,10 +3987,10 @@ CREATE TABLE chat_response_times (
     CONSTRAINT fk_response_responder FOREIGN KEY (responder_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
---materialized views 
+--materialized views
 -- Conversation quality summary (refreshed hourly)
 CREATE MATERIALIZED VIEW mv_conversation_quality AS
-SELECT 
+SELECT
     c.conversation_id,
     c.is_group,
     COUNT(DISTINCT cm.message_id) AS message_count,
@@ -4010,7 +4010,7 @@ CREATE UNIQUE INDEX ON mv_conversation_quality (conversation_id);
 
 -- User chat performance (refreshed daily)
 CREATE MATERIALIZED VIEW mv_user_chat_performance AS
-SELECT 
+SELECT
     u.user_id,
     u.username,
     COUNT(DISTINCT c.conversation_id) AS conversation_count,
@@ -4030,7 +4030,7 @@ GROUP BY u.user_id, u.username;
 
 CREATE UNIQUE INDEX ON mv_user_chat_performance (user_id);
 
---stored procedures 
+--stored procedures
 -- Procedure to analyze conversation sentiment
 CREATE OR REPLACE PROCEDURE sp_analyze_conversation_sentiment(
     p_conversation_id INTEGER
@@ -4045,10 +4045,10 @@ DECLARE
 BEGIN
     -- Clear existing analysis for this conversation
     DELETE FROM chat_sentiment_analysis WHERE conversation_id = p_conversation_id;
-    
+
     -- Analyze each message (simplified example - in practice would call a sentiment analysis API)
-    FOR v_message IN 
-        SELECT 
+    FOR v_message IN
+        SELECT
             message_id,
             message
         FROM conversations_messages
@@ -4065,7 +4065,7 @@ BEGIN
         ELSE
             v_sentiment_label := 'neutral';
         END IF;
-        
+
         -- Simple keyword extraction (placeholder)
         v_keywords := ARRAY(
             SELECT DISTINCT LOWER(word)
@@ -4074,7 +4074,7 @@ BEGIN
             AND word !~ '^[0-9]+$'
             LIMIT 5
         );
-        
+
         -- Store the analysis
         INSERT INTO chat_sentiment_analysis (
             conversation_id,
@@ -4091,20 +4091,20 @@ BEGIN
             v_keywords
         );
     END LOOP;
-    
+
     -- Calculate and store conversation-level sentiment
     INSERT INTO chat_quality_metrics (
         conversation_id,
         metric_name,
         metric_value
     )
-    SELECT 
+    SELECT
         p_conversation_id,
         'sentiment',
         AVG(sentiment_score)
     FROM chat_sentiment_analysis
     WHERE conversation_id = p_conversation_id;
-    
+
     -- Log the analysis
     INSERT INTO audit_logs (
         action_type,
@@ -4136,10 +4136,10 @@ DECLARE
 BEGIN
     -- Clear existing response times for this conversation
     DELETE FROM chat_response_times WHERE conversation_id = p_conversation_id;
-    
+
     -- Calculate response times between messages
-    FOR v_previous_message IN 
-        SELECT 
+    FOR v_previous_message IN
+        SELECT
             message_id,
             user_id,
             time
@@ -4148,7 +4148,7 @@ BEGIN
         ORDER BY time
     LOOP
         -- Find the next message by a different user
-        SELECT 
+        SELECT
             EXTRACT(EPOCH FROM (cm.time - v_previous_message.time))::INTEGER,
             cm.message_id,
             cm.user_id
@@ -4159,7 +4159,7 @@ BEGIN
         AND cm.user_id <> v_previous_message.user_id
         ORDER BY cm.time
         LIMIT 1;
-        
+
         -- Store the response time if found
         IF v_response_time IS NOT NULL THEN
             INSERT INTO chat_response_times (
@@ -4176,20 +4176,20 @@ BEGIN
             );
         END IF;
     END LOOP;
-    
+
     -- Calculate and store average response time metric
     INSERT INTO chat_quality_metrics (
         conversation_id,
         metric_name,
         metric_value
     )
-    SELECT 
+    SELECT
         p_conversation_id,
         'avg_response_time',
         AVG(response_time_seconds)
     FROM chat_response_times
     WHERE conversation_id = p_conversation_id;
-    
+
     -- Log the calculation
     INSERT INTO audit_logs (
         action_type,
@@ -4210,7 +4210,7 @@ END;
 $$;
 
 
---AB Testing Framework 
+--AB Testing Framework
 -- A/B test experiments
 CREATE TABLE ab_test_experiments (
     experiment_id SERIAL PRIMARY KEY,
@@ -4275,7 +4275,7 @@ CREATE TABLE ab_test_results (
     CONSTRAINT fk_result_metric FOREIGN KEY (metric_id) REFERENCES ab_test_metrics(metric_id) ON DELETE CASCADE
 );
 
---stored procedures 
+--stored procedures
 -- Procedure to assign user to experiment variant
 CREATE OR REPLACE FUNCTION fn_assign_user_to_experiment(
     p_user_id INTEGER,
@@ -4293,29 +4293,29 @@ BEGIN
     SELECT variant_id INTO v_variant_id
     FROM ab_test_assignments
     WHERE user_id = p_user_id AND experiment_id = p_experiment_id;
-    
+
     IF v_variant_id IS NOT NULL THEN
         RETURN v_variant_id;
     END IF;
-    
+
     -- Get active experiment
     IF NOT EXISTS (
-        SELECT 1 FROM ab_test_experiments 
-        WHERE experiment_id = p_experiment_id 
+        SELECT 1 FROM ab_test_experiments
+        WHERE experiment_id = p_experiment_id
         AND is_active = TRUE
         AND start_date <= CURRENT_TIMESTAMP
         AND (end_date IS NULL OR end_date > CURRENT_TIMESTAMP)
     ) THEN
         RETURN NULL;
     END IF;
-    
+
     -- Generate random number for variant allocation
     v_random := random();
-    
+
     -- Find appropriate variant based on allocation percentages
     SELECT variant_id INTO v_variant_id
     FROM (
-        SELECT 
+        SELECT
             variant_id,
             SUM(allocation_percentage) OVER (ORDER BY variant_id) - allocation_percentage AS lower_bound,
             SUM(allocation_percentage) OVER (ORDER BY variant_id) AS upper_bound
@@ -4324,7 +4324,7 @@ BEGIN
     ) t
     WHERE v_random >= lower_bound AND v_random < upper_bound
     LIMIT 1;
-    
+
     -- Assign user to variant
     INSERT INTO ab_test_assignments (
         experiment_id,
@@ -4337,7 +4337,7 @@ BEGIN
         p_user_id
     )
     RETURNING assignment_id INTO v_assignment_id;
-    
+
     -- Log the assignment
     INSERT INTO audit_logs (
         user_id,
@@ -4356,7 +4356,7 @@ BEGIN
             'variant_id', v_variant_id
         )
     );
-    
+
     RETURN v_variant_id;
 END;
 $$;
@@ -4376,7 +4376,7 @@ DECLARE
 BEGIN
     -- Clear existing results for this experiment
     DELETE FROM ab_test_results WHERE experiment_id = p_experiment_id;
-    
+
     -- Calculate each metric for each variant
     FOR v_metric IN SELECT * FROM ab_test_metrics WHERE experiment_id = p_experiment_id
     LOOP
@@ -4384,25 +4384,25 @@ BEGIN
         LOOP
             -- Build dynamic SQL based on metric definition
             v_sql := 'SELECT ';
-            
+
             -- Determine aggregation
             CASE v_metric.aggregation_type
                 WHEN 'count' THEN v_sql := v_sql || 'COUNT(*)';
                 WHEN 'sum' THEN v_sql := v_sql || 'COALESCE(SUM(' || quote_ident(v_metric.target_column) || '), 0)';
                 WHEN 'avg' THEN v_sql := v_sql || 'COALESCE(AVG(' || quote_ident(v_metric.target_column) || '), 0)';
-                WHEN 'rate' THEN v_sql := v_sql || 
+                WHEN 'rate' THEN v_sql := v_sql ||
                     'COALESCE(SUM(CASE WHEN ' || quote_ident(v_metric.target_column) || ' THEN 1 ELSE 0 END)::NUMERIC / NULLIF(COUNT(*), 0), 0)';
                 ELSE RAISE EXCEPTION 'Unknown aggregation type: %', v_metric.aggregation_type;
             END CASE;
-            
+
             v_sql := v_sql || ', COUNT(*) FROM ' || quote_ident(v_metric.target_table) || ' t ';
             v_sql := v_sql || 'JOIN ab_test_assignments a ON t.user_id = a.user_id ';
             v_sql := v_sql || 'WHERE a.experiment_id = ' || p_experiment_id || ' ';
             v_sql := v_sql || 'AND a.variant_id = ' || v_variant.variant_id;
-            
+
             -- Execute the query
             EXECUTE v_sql INTO v_result, v_count;
-            
+
             -- Store the result
             INSERT INTO ab_test_results (
                 experiment_id,
@@ -4420,7 +4420,7 @@ BEGIN
             );
         END LOOP;
     END LOOP;
-    
+
     -- Log the calculation
     INSERT INTO audit_logs (
         action_type,
@@ -4439,12 +4439,12 @@ BEGIN
 END;
 $$;
 
----secure chat encryption keys 
+---secure chat encryption keys
 -- Create a table to store encryption keys securely
 -- First add a UUID column to users table
 ALTER TABLE users ADD COLUMN user_uuid UUID DEFAULT gen_random_uuid() UNIQUE;
 
---Create the chats table 
+--Create the chats table
 CREATE TABLE chats (
     chat_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_name VARCHAR(255),
@@ -4471,7 +4471,7 @@ CREATE TABLE chat_encryption_keys (
 COMMENT ON TABLE chat_encryption_keys IS 'Stores encrypted chat encryption keys with high security';
 
 
---database access control modification 
+--database access control modification
 -- -- Create a restricted role for application access
 -- CREATE ROLE chat_app WITH LOGIN PASSWORD 'secure_password';
 -- GRANT CONNECT ON DATABASE your_db TO chat_app;
@@ -4479,7 +4479,7 @@ COMMENT ON TABLE chat_encryption_keys IS 'Stores encrypted chat encryption keys 
 -- -- Explicitly deny access to encrypted_key column from other roles
 -- REVOKE ALL ON chat_encryption_keys FROM PUBLIC;
 
---Audit Trail 
+--Audit Trail
 -- Add audit table for key access
 -- Key access audit table (fixed type mismatch)
 CREATE TABLE IF NOT EXISTS key_access_audit (
@@ -4505,7 +4505,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_chats_timestamp') THEN
         EXECUTE 'DROP TRIGGER update_chats_timestamp ON chats';
     END IF;
-    
+
     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_keys_timestamp') THEN
         EXECUTE 'DROP TRIGGER update_keys_timestamp ON chat_encryption_keys';
     END IF;
@@ -4521,7 +4521,7 @@ CREATE TRIGGER update_keys_timestamp
 BEFORE UPDATE ON chat_encryption_keys
 FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
---Enhanced UserProfiles 
+--Enhanced UserProfiles
 
 
 CREATE TABLE locations (
@@ -4551,7 +4551,7 @@ CREATE TABLE user_profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
---Enhanced Content Management 
+--Enhanced Content Management
 CREATE TABLE post_types (
     post_types_id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
@@ -4578,7 +4578,7 @@ CREATE TABLE media_attachments (
 );
 
 
---advanced relationships feature 
+--advanced relationships feature
 CREATE TABLE relationship_types (
     relationship_types_id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
@@ -4600,7 +4600,7 @@ CREATE TABLE user_relationships (
 ALTER TABLE user_relationships ADD COLUMN strength DECIMAL(3,2) DEFAULT 1.0;
 
 
---privacy controls 
+--privacy controls
 CREATE TABLE privacy_settings (
     privacy_settings_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -4628,7 +4628,7 @@ CREATE TABLE post_visibility_custom (
 );
 
 
---analytcis and recommendations 
+--analytcis and recommendations
 
 CREATE TABLE user_activities (
     user_activities_id SERIAL PRIMARY KEY,
@@ -4659,7 +4659,7 @@ CREATE TABLE user_similarity (
     CHECK (user1_id < user2_id) -- ensure no duplicate pairs
 );
 
---monetization features 
+--monetization features
 
 CREATE TABLE subscription_plans (
     subscription_plans_id SERIAL PRIMARY KEY,
@@ -4695,7 +4695,7 @@ CREATE TABLE creator_monetization (
 );
 
 
--- enhanced search functionality 
+-- enhanced search functionality
 -- For full-text search optimization
 ALTER TABLE posts ADD COLUMN search_vector TSVECTOR;
 CREATE INDEX idx_post_search ON posts USING GIN(search_vector);
@@ -4716,7 +4716,7 @@ CREATE TABLE trending_topics (
 );
 
 
---Notifications System 
+--Notifications System
 CREATE TABLE notification_types (
     notification_types_id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
@@ -4745,7 +4745,7 @@ CREATE TABLE user_notifications (
 --     UNIQUE (user_id, notification_type_id)
 -- );
 
---adding feature for graph-based relationship analytics 
+--adding feature for graph-based relationship analytics
 -- Extended relationship tracking with weights and directions
 CREATE TABLE relationship_graph (
     source_user INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -4760,14 +4760,14 @@ CREATE TABLE relationship_graph (
 -- Materialized view for fast graph analytics
 CREATE MATERIALIZED VIEW user_centrality AS
 WITH graph AS (
-    SELECT source_user AS user1, target_user AS user2, weight 
+    SELECT source_user AS user1, target_user AS user2, weight
     FROM relationship_graph
     UNION ALL
-    SELECT target_user AS user1, source_user AS user2, weight 
+    SELECT target_user AS user1, source_user AS user2, weight
     FROM relationship_graph
     WHERE relationship_type IN (SELECT relationship_types_id FROM relationship_types WHERE is_symmetric = TRUE)
 )
-SELECT 
+SELECT
     user1 AS user_id,
     COUNT(DISTINCT user2) AS degree_centrality,
     LOG(COUNT(DISTINCT user2) + 1) * SUM(weight) AS weighted_centrality
@@ -4785,7 +4785,7 @@ CREATE TABLE shortest_path_cache (
     CHECK (user1 < user2)
 );
 
---blockchain verified identity 
+--blockchain verified identity
 CREATE TABLE blockchain_identity (
     user_id INTEGER PRIMARY KEY REFERENCES users(user_id),
     wallet_address CHAR(42) UNIQUE,
@@ -4794,7 +4794,7 @@ CREATE TABLE blockchain_identity (
     last_verified_block INTEGER
 );
 
---AI powered content moderation 
+--AI powered content moderation
 CREATE TABLE content_moderation (
     content_id INTEGER NOT NULL,
     content_type VARCHAR(20) CHECK (content_type IN ('post', 'comment', 'media')),
@@ -4808,8 +4808,8 @@ CREATE TABLE content_moderation (
 
 
 
---real-time engagement tracking 
--- to enhance this to use timescaledb -- we should start using timescale db 
+--real-time engagement tracking
+-- to enhance this to use timescaledb -- we should start using timescale db
 CREATE TABLE engagement_windows (
     window_id SERIAL PRIMARY KEY,
     window_size INTERVAL NOT NULL
@@ -4831,7 +4831,7 @@ CREATE INDEX idx_live_engagement_time ON live_engagement (window_start);
 
 
 
---neural network recommendations 
+--neural network recommendations
 CREATE TABLE neural_recommendations (
     user_id INTEGER REFERENCES users(user_id),
     recommended_item INTEGER NOT NULL,
@@ -4843,7 +4843,7 @@ CREATE TABLE neural_recommendations (
     PRIMARY KEY (user_id, recommended_item, item_type)
 );
 
---call metrics for voice/video 
+--call metrics for voice/video
 CREATE TABLE call_metrics (
     call_id UUID PRIMARY KEY,
     initiator INTEGER REFERENCES users(user_id),
@@ -4866,7 +4866,7 @@ CREATE TABLE churn_predictions (
     last_updated TIMESTAMP WITH TIME ZONE
 );
 
---cross platform integration 
+--cross platform integration
 CREATE TABLE external_platforms (
     user_id INTEGER REFERENCES users(user_id),
     platform_name VARCHAR(50) NOT NULL,
@@ -4878,7 +4878,7 @@ CREATE TABLE external_platforms (
 );
 
 
---network dynamcis advanced analytics 
+--network dynamcis advanced analytics
 CREATE TABLE network_dynamics_snapshots (
     snapshot_date DATE PRIMARY KEY,
     active_users INTEGER NOT NULL,
@@ -4890,14 +4890,14 @@ CREATE OR REPLACE FUNCTION update_network_dynamics()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO network_dynamics_snapshots
-    SELECT 
+    SELECT
         CURRENT_DATE,
         COUNT(DISTINCT source_user),
         SUM(interaction_count),
         AVG(weight)
     FROM relationship_graph
     WHERE last_interaction >= CURRENT_DATE
-    ON CONFLICT (snapshot_date) 
+    ON CONFLICT (snapshot_date)
     DO UPDATE SET
         active_users = EXCLUDED.active_users,
         total_interactions = EXCLUDED.total_interactions,
@@ -4910,9 +4910,9 @@ CREATE TRIGGER trg_network_dynamics
 AFTER INSERT OR UPDATE ON relationship_graph
 EXECUTE FUNCTION update_network_dynamics();
 
---views additional i happen to miss out 
+--views additional i happen to miss out
 --usergrowth funnel
--- adding additional flag to the users table 
+-- adding additional flag to the users table
 ALTER TABLE users
 ADD COLUMN profile_complete BOOLEAN NOT NULL DEFAULT FALSE;
 
@@ -4920,7 +4920,7 @@ ALTER TABLE users ADD COLUMN signup_source VARCHAR(255);
 
 CREATE OR REPLACE VIEW user_growth_funnel AS
 WITH stages AS (
-    SELECT 
+    SELECT
         DATE(created_at) AS day,
         COUNT(*) FILTER (WHERE users.is_verified = TRUE) AS verified_users, -- changed from email_verified
         COUNT(*) FILTER (WHERE users.profile_complete = TRUE) AS completed_profiles, -- changed from profile_completion_status
@@ -4928,12 +4928,12 @@ WITH stages AS (
     FROM users
     GROUP BY DATE(created_at)
 )
-SELECT 
+SELECT
     day,
     verified_users,
     completed_profiles,
     active_users,
-    CASE WHEN verified_users > 0 
+    CASE WHEN verified_users > 0
          THEN ROUND(100.0 * completed_profiles / verified_users, 2)
          ELSE 0 END AS profile_completion_rate,
     CASE WHEN completed_profiles > 0
@@ -4941,17 +4941,17 @@ SELECT
          ELSE 0 END AS activation_rate
 FROM stages;
 
---create post metrics 
+--create post metrics
 CREATE TABLE post_metrics (
     post_metrics_id UUID PRIMARY KEY,
     like_count INT,
     comment_count INT,
     share_count INT
 );
---content performance heatmap 
+--content performance heatmap
 
 CREATE VIEW content_heatmap AS
-SELECT 
+SELECT
     p.user_id,
     DATE_TRUNC('hour', p.post_time) AS post_hour,
     TO_CHAR(p.post_time, 'Day') AS day_of_week,
@@ -4960,14 +4960,14 @@ SELECT
     AVG(p.post_comments) AS avg_comments,
     AVG(p.post_shares) AS avg_shares
 FROM posts p
-GROUP BY 
-    p.user_id, 
-    DATE_TRUNC('hour', p.post_time), 
+GROUP BY
+    p.user_id,
+    DATE_TRUNC('hour', p.post_time),
     TO_CHAR(p.post_time, 'Day');
 
 
 
---create view to check relationship network health 
+--create view to check relationship network health
 CREATE VIEW network_health AS
 SELECT
     DATE_TRUNC('week', rg.last_interaction) AS week,
@@ -4978,7 +4978,7 @@ SELECT
 FROM relationship_graph rg
 GROUP BY DATE_TRUNC('week', rg.last_interaction);
 
---measuring revenue attribution 
+--measuring revenue attribution
 -- Add user_id to link directly to users
 ALTER TABLE wallet_transactions ADD COLUMN user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE;
 
@@ -5001,29 +5001,29 @@ ALTER TABLE wallet_transactions ADD COLUMN is_refunded BOOLEAN DEFAULT FALSE;
 ALTER TABLE wallet_transactions ADD COLUMN fee DECIMAL(15, 2) DEFAULT 0.00;
 
 -- Add generated column for net_amount (requires PostgreSQL 12+)
-ALTER TABLE wallet_transactions 
+ALTER TABLE wallet_transactions
 ADD COLUMN net_amount DECIMAL(15, 2) GENERATED ALWAYS AS (amount - fee) STORED;
 
 CREATE INDEX idx_wallet_transactions_user ON wallet_transactions(user_id);
 CREATE INDEX idx_wallet_transactions_campaign ON wallet_transactions(campaign_source);
 CREATE INDEX idx_wallet_transactions_signup ON wallet_transactions(signup_source);
 CREATE INDEX idx_wallet_transactions_time ON wallet_transactions(transaction_time);
---usecases for revenue attribution 
---by campaign source 
+--usecases for revenue attribution
+--by campaign source
 SELECT campaign_source, COUNT(*) AS transactions, SUM(net_amount) AS total_revenue
 FROM wallet_transactions
 WHERE transaction_type = 'deposit' AND status = 'completed'
 GROUP BY campaign_source;
 
 
---by signup source 
+--by signup source
 SELECT signup_source, COUNT(*) AS paying_users, SUM(net_amount) AS total_revenue
 FROM wallet_transactions
 WHERE transaction_type = 'deposit' AND status = 'completed'
 GROUP BY signup_source;
 
---by subscription revenue over time 
-SELECT DATE_TRUNC('month', transaction_time) AS month, 
+--by subscription revenue over time
+SELECT DATE_TRUNC('month', transaction_time) AS month,
        SUM(net_amount) AS monthly_revenue
 FROM wallet_transactions
 WHERE related_subscription_id IS NOT NULL
@@ -5040,15 +5040,15 @@ SELECT
     AVG(t.amount) AS avg_transaction_value
 FROM
     users u
-LEFT JOIN wallet_transactions t 
-    ON u.user_id = t.user_id 
+LEFT JOIN wallet_transactions t
+    ON u.user_id = t.user_id
     AND t.transaction_type = 'deposit'
     AND t.status = 'completed'
 GROUP BY
     u.signup_source;
 
 
---flagged content 
+--flagged content
 CREATE TABLE flagged_content (
     flagged_id SERIAL PRIMARY KEY,
     content_type VARCHAR(50) NOT NULL CHECK (content_type IN ('post', 'comment')),
@@ -5062,18 +5062,18 @@ CREATE TABLE flagged_content (
 );
 
 -- Add action_taken to content_moderation
-ALTER TABLE content_moderation 
+ALTER TABLE content_moderation
 ADD COLUMN IF NOT EXISTS action_taken VARCHAR(50);
 
 COMMENT ON COLUMN content_moderation.action_taken IS 'Type of action taken by moderator (e.g., removed, warned)';
 
 -- Add reviewed_at to content_moderation
-ALTER TABLE content_moderation 
+ALTER TABLE content_moderation
 ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE;
 
 COMMENT ON COLUMN content_moderation.reviewed_at IS 'Timestamp when content was reviewed by a moderator';
 
---measuring moderation effectiveness 
+--measuring moderation effectiveness
 CREATE OR REPLACE VIEW moderation_effectiveness AS
 SELECT
     DATE_TRUNC('day', ma.action_timestamp) AS day,
@@ -5085,10 +5085,10 @@ SELECT
         WHERE ma.action_timestamp - f.flagged_at < INTERVAL '1 hour'
     ) AS fast_resolutions
 FROM moderator_actions ma
-LEFT JOIN content_moderation cm ON 
+LEFT JOIN content_moderation cm ON
     (ma.target_type = 'post' AND ma.target_id = cm.content_id AND cm.content_type = 'post') OR
     (ma.target_type = 'comment' AND ma.target_id = cm.content_id AND cm.content_type = 'comment')
-LEFT JOIN flagged_content f ON 
+LEFT JOIN flagged_content f ON
     (f.content_type = ma.target_type AND f.content_id = ma.target_id)
 WHERE ma.action_type IN ('content_removal', 'user_warning', 'flag_review')
 GROUP BY DATE_TRUNC('day', ma.action_timestamp)
@@ -5096,15 +5096,15 @@ ORDER BY day DESC;
 
 
 
---content virality pathways 
+--content virality pathways
 WITH viral_posts AS (
-    SELECT 
+    SELECT
         post_id,
         post_time AS created_at,
         post_shares
-    FROM 
+    FROM
         posts
-    WHERE 
+    WHERE
         post_shares > (
             SELECT AVG(post_shares) * 5
             FROM posts
@@ -5112,39 +5112,39 @@ WITH viral_posts AS (
         )
 ),
 viral_timing AS (
-    SELECT 
+    SELECT
         vp.post_id,
         MIN(cem.engagement_timestamp) AS first_shared_at
-    FROM 
+    FROM
         viral_posts vp
-    JOIN 
-        content_engagement_metrics cem 
+    JOIN
+        content_engagement_metrics cem
         ON vp.post_id = cem.content_id
        AND cem.content_type = 'post'
        AND cem.engagement_type = 'share'
-    GROUP BY 
+    GROUP BY
         vp.post_id
 )
-SELECT 
+SELECT
     p.post_type AS content_type,
     p.language_code,
     COUNT(*) AS viral_post_count,
     ROUND(AVG(EXTRACT(EPOCH FROM (vt.first_shared_at - p.post_time)) / 3600), 2) AS avg_hours_to_viral,
     ARRAY_AGG(DISTINCT p.user_id) AS origin_users
-FROM 
+FROM
     viral_posts vp
-JOIN 
+JOIN
     posts p ON vp.post_id = p.post_id
-JOIN 
+JOIN
     viral_timing vt ON vp.post_id = vt.post_id
-GROUP BY 
+GROUP BY
     p.post_type, p.language_code;
 
 
---user retention view 
+--user retention view
 CREATE OR REPLACE VIEW retention_cohorts AS
 WITH user_cohorts AS (
-    SELECT 
+    SELECT
         user_id,
         DATE_TRUNC('week', created_at) AS signup_week
     FROM users
@@ -5157,7 +5157,7 @@ SELECT
     COUNT(DISTINCT a.user_id) FILTER (WHERE a.activity_week = uc.signup_week + INTERVAL '2 weeks') AS week_2
 FROM user_cohorts uc
 LEFT JOIN (
-    SELECT 
+    SELECT
         user_id,
         DATE_TRUNC('week', activity_timestamp) AS activity_week
     FROM user_activity_logs
@@ -5191,7 +5191,7 @@ FROM feature_usage_cte
 GROUP BY feature_name;
 
 
---content production velocity measures 
+--content production velocity measures
 CREATE OR REPLACE VIEW content_velocity AS
 SELECT
     user_id,
@@ -5207,7 +5207,7 @@ GROUP BY user_id
 HAVING COUNT(*) > 5;
 
 
---user value segmentation view 
+--user value segmentation view
 CREATE OR REPLACE VIEW user_value_segmentation AS
 WITH user_activity_stats AS (
     SELECT
@@ -5271,7 +5271,7 @@ CREATE TABLE api_logs (
     user_agent TEXT
 );
 
---api usage analytics view 
+--api usage analytics view
 CREATE OR REPLACE VIEW api_usage_metrics AS
 SELECT
     endpoint,
@@ -5286,7 +5286,7 @@ GROUP BY endpoint, DATE_TRUNC('day', called_at)
 ORDER BY day DESC, call_count DESC;
 
 
---moderation workload forecast 
+--moderation workload forecast
 CREATE OR REPLACE VIEW moderation_workload_forecast AS
 WITH daily_actions AS (
     SELECT
@@ -5321,7 +5321,7 @@ projected_actions AS (
 SELECT * FROM projected_actions
 ORDER BY day;
 
---posts table adding trending score 
+--posts table adding trending score
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS trending_score DECIMAL(10,2) DEFAULT 0;
 -- Trending index
 CREATE INDEX IF NOT EXISTS idx_posts_trending ON posts(trending_score DESC);
@@ -5332,4 +5332,505 @@ CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON user_activity_logs(activity
 -- Message time index
 CREATE INDEX IF NOT EXISTS idx_message_time ON conversations_messages(time);
 
---view for measuring realtime network pulse 
+--view for measuring realtime network pulse
+-- todo
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 1
+-- DATABASE OBJECT NAME: posts_trending_score
+-- DESCRIPTION: Adds a computed column to track trending score of posts using
+--              likes, comments, shares, recency, and virality factors.
+-- DDL: ALTER TABLE posts ADD COLUMN trending_score NUMERIC(10,4) DEFAULT 0;
+-- BUSINESS CASE: Enables dynamic content ranking for newsfeed personalization
+--                and discovery features; supports algorithmic feed optimization.
+-- KPIs: Feed relevance rate, time-on-feed, viral content detection speed
+-- REFERENCE TABLES: posts, post_metrics
+-- -----------------------------------------------------------------------------
+ALTER TABLE IF EXISTS posts ADD COLUMN IF NOT EXISTS trending_score NUMERIC(10,4) DEFAULT 0;
+COMMENT ON COLUMN posts.trending_score IS 'Computed score combining engagement velocity, recency, and network propagation for trending algorithms';
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 2
+-- DATABASE OBJECT NAME: idx_posts_trending_active
+-- DESCRIPTION: Index on trending_score and post_time for fast retrieval of
+--              active trending posts.
+-- DDL: CREATE INDEX idx_posts_trending_active ON posts(trending_score DESC, post_time DESC) WHERE is_deleted = FALSE AND status = 'published';
+-- BUSINESS CASE: Accelerates queries used by home feed and trending page APIs.
+-- KPIS: Query latency for /trending endpoint, P95 feed load time
+-- REFERENCE TABLES: posts
+-- -----------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_posts_trending_active
+ON posts(trending_score DESC, post_time DESC)
+WHERE is_deleted = FALSE AND status = 'published';
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 3
+-- DATABASE OBJECT NAME: mv_daily_engagement_summary
+-- DESCRIPTION: Materialized view summarizing daily user engagement metrics
+--              including DAU, actions per user, session depth, etc.
+-- DDL: CREATE MATERIALIZED VIEW mv_daily_engagement_summary AS ...
+-- BUSINESS CASE: Supports executive dashboards, product analytics, and KPI reporting.
+-- KPIs: Daily Active Users (DAU), Engagement Rate, Session Duration, Retention Cohorts
+-- REFERENCE TABLES: user_activity_logs, users, visitor_analytics
+-- -----------------------------------------------------------------------------
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_daily_engagement_summary AS
+SELECT
+    DATE_TRUNC('day', activity_timestamp) AS activity_day,
+    COUNT(DISTINCT user_id) AS dau,
+    COUNT(*) AS total_actions,
+    ROUND(COUNT(*)::NUMERIC / NULLIF(COUNT(DISTINCT user_id), 0), 2) AS avg_actions_per_user,
+    AVG(EXTRACT(EPOCH FROM (session_end_time - session_start_time))) AS avg_session_duration_sec,
+    COUNT(*) FILTER (WHERE activity_type LIKE 'post_%') AS posts_interactions,
+    COUNT(*) FILTER (WHERE activity_type LIKE 'comment_%') AS comment_interactions,
+    COUNT(*) FILTER (WHERE activity_type = 'login') AS logins
+FROM user_activity_logs ual
+LEFT JOIN visitor_analytics va ON ual.user_id = va.user_id
+    AND DATE_TRUNC('day', ual.activity_timestamp) = DATE_TRUNC('day', va.session_start_time)
+GROUP BY DATE_TRUNC('day', activity_timestamp);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_mv_daily_engagement_summary ON mv_daily_engagement_summary(activity_day);
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 4
+-- DATABASE OBJECT NAME: sp_refresh_daily_engagement_summary
+-- DESCRIPTION: Stored procedure to refresh mv_daily_engagement_summary concurrently.
+-- DDL: CREATE OR REPLACE PROCEDURE sp_refresh_daily_engagement_summary()
+-- BUSINESS CASE: Ensures up-to-date analytics without blocking reads.
+-- KPIs: Dashboard refresh accuracy, ETL pipeline reliability
+-- REFERENCE VIEWS: mv_daily_engagement_summary
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE sp_refresh_daily_engagement_summary()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_engagement_summary;
+    INSERT INTO audit_logs (action_type, table_name, details)
+    VALUES ('REFRESH_MV', 'mv_daily_engagement_summary', jsonb_build_object('status', 'success'));
+EXCEPTION
+    WHEN OTHERS THEN
+        INSERT INTO audit_logs (action_type, table_name, details)
+        VALUES ('REFRESH_MV_ERROR', 'mv_daily_engagement_summary',
+                jsonb_build_object('error', SQLERRM));
+        RAISE;
+END;
+$$;
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 5
+-- DATABASE OBJECT NAME: fk_post_metrics_post_id
+-- DESCRIPTION: Enforces referential integrity between post_metrics and posts.
+-- DDL: ALTER TABLE post_metrics ADD CONSTRAINT fk_post_metrics_post_id FOREIGN KEY (post_metrics_id) REFERENCES posts(post_id);
+-- BUSINESS CASE: Prevents orphaned metric records and ensures atomic updates.
+-- KPIs: Data consistency error rate, foreign key violation incidents
+-- REFERENCE TABLES: post_metrics → posts
+-- -----------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'fk_post_metrics_post_id'
+    ) THEN
+        ALTER TABLE post_metrics
+        ADD CONSTRAINT fk_post_metrics_post_id
+        FOREIGN KEY (post_metrics_id) REFERENCES posts(post_id) ON DELETE CASCADE;
+    END IF;
+END $$;
+COMMENT ON CONSTRAINT fk_post_metrics_post_id ON post_metrics IS 'Ensures post_metrics always references a valid post';
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 6
+-- DATABASE OBJECT NAME: idx_user_email_unique_active
+-- DESCRIPTION: Partial unique index ensuring only one active account per email.
+-- DDL: CREATE UNIQUE INDEX idx_user_email_unique_active ON users(email) WHERE is_active = TRUE;
+-- BUSINESS CASE: Prevents duplicate active registrations while allowing soft-deleted accounts.
+-- KPIs: Duplicate account creation rate, identity resolution success
+-- REFERENCE TABLES: users
+-- -----------------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_email_unique_active
+ON users(email) WHERE is_active = TRUE;
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 7
+-- DATABASE OBJECT NAME: mv_user_content_velocity
+-- DESCRIPTION: Tracks content creation velocity (posts/day) per user over sliding window.
+-- DDL: CREATE MATERIALIZED VIEW mv_user_content_velocity AS ...
+-- BUSINESS CASE: Detects spam, bot behavior, or viral influencers early.
+-- KPIs: Spam detection rate, false positive rate, moderator triage efficiency
+-- REFERENCE TABLES: posts, users
+-- -----------------------------------------------------------------------------
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_user_content_velocity AS
+SELECT
+    user_id,
+    COUNT(*) AS post_count_last_24h,
+    MAX(post_time) AS last_post_time,
+    BOOL_OR(is_deleted) AS has_deleted_recently
+FROM posts
+WHERE post_time >= NOW() - INTERVAL '24 hours'
+GROUP BY user_id;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_mv_user_content_velocity ON mv_user_content_velocity(user_id);
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 8
+-- DATABASE OBJECT NAME: trg_update_trending_score
+-- DESCRIPTION: Trigger function to update trending_score after new reactions/comments.
+-- DDL: CREATE OR REPLACE FUNCTION fn_update_trending_score() ... CREATE TRIGGER ...
+-- BUSINESS CASE: Real-time feed relevance based on evolving engagement.
+-- KPIs: Trending feed accuracy, engagement lift from algorithmic sorting
+-- REFERENCE TABLES: posts, post_metrics
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_update_trending_score()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_recency_factor NUMERIC := 1.0;
+    v_engagement_score NUMERIC := 0;
+BEGIN
+    -- Recency decay factor (half-life ~ 4 hours)
+    SELECT EXP(-EXTRACT(EPOCH FROM (NOW() - p.post_time)) / (4 * 3600))
+    INTO v_recency_factor
+    FROM posts p WHERE p.post_id = NEW.post_metrics_id;
+
+    SELECT COALESCE(like_count, 0) * 1.0 +
+           COALESCE(comment_count, 0) * 2.0 +
+           COALESCE(share_count, 0) * 3.0
+    INTO v_engagement_score
+    FROM post_metrics WHERE post_metrics_id = NEW.post_metrics_id;
+
+    UPDATE posts
+    SET trending_score = v_engagement_score * v_recency_factor
+    WHERE post_id = NEW.post_metrics_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_trending_score ON post_metrics;
+CREATE TRIGGER trg_update_trending_score
+    AFTER INSERT OR UPDATE ON post_metrics
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_update_trending_score();
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 9
+-- DATABASE OBJECT NAME: data_profiling_log
+-- DESCRIPTION: Table to store historical results of data quality and profiling jobs.
+-- DDL: CREATE TABLE data_profiling_log (...);
+-- BUSINESS CASE: Audit trail for data governance, helps track data drift and anomalies.
+-- KPIs: Data freshness compliance, anomaly detection lead time
+-- REFERENCE TABLES: N/A (new core metadata table)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS data_profiling_log (
+    profile_log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    table_name VARCHAR(128) NOT NULL,
+    column_name VARCHAR(128),
+    profile_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    row_count BIGINT,
+    null_ratio NUMERIC(5,4),
+    distinct_ratio NUMERIC(5,4),
+    min_value TEXT,
+    max_value TEXT,
+    avg_length INTEGER,
+    std_deviation NUMERIC,
+    most_frequent_values JSONB,
+    histogram_buckets JSONB,
+    data_skew_index NUMERIC(6,4),
+    execution_time_ms INTEGER
+);
+COMMENT ON TABLE data_profiling_log IS 'Historical logs from automated data profiling tasks for monitoring data health and detecting drift';
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 10
+-- DATABASE OBJECT NAME: sp_run_data_profiling
+-- DESCRIPTION: Procedure to profile all columns in critical tables and log results.
+-- DDL: CREATE OR REPLACE PROCEDURE sp_run_data_profiling()
+-- BUSINESS CASE: Proactive data governance, essential for regulatory compliance and ML pipelines.
+-- KPIs: % of tables profiled monthly, number of data anomalies detected
+-- REFERENCE TABLES: users, posts, comments, data_profiling_log
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE sp_run_data_profiling()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r RECORD;
+    v_sql TEXT;
+    v_null_count BIGINT;
+    v_total_count BIGINT;
+    v_distinct_count BIGINT;
+BEGIN
+    FOR r IN
+        SELECT table_name, column_name, data_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name IN ('users', 'posts', 'comments', 'user_activity_logs')
+          AND column_name NOT IN ('password_hash', 'salt') -- exclude sensitive fields
+    LOOP
+        v_sql := format('SELECT COUNT(*), COUNT(%I), COUNT(DISTINCT %I) FROM %I',
+                        r.column_name, r.column_name, r.table_name);
+
+        EXECUTE v_sql INTO v_total_count, v_null_count, v_distinct_count;
+
+        INSERT INTO data_profiling_log (
+            table_name, column_name, row_count, null_ratio, distinct_ratio,
+            min_value, max_value, avg_length
+        )
+        SELECT
+            r.table_name,
+            r.column_name,
+            v_total_count,
+            ROUND(v_null_count::NUMERIC / NULLIF(v_total_count, 0), 4),
+            ROUND(v_distinct_count::NUMERIC / NULLIF(v_total_count, 0), 4),
+            MIN(COALESCE(LENGTH(r.column_name::TEXT), 0)::TEXT),
+            MAX(COALESCE(LENGTH(r.column_name::TEXT), 0)::TEXT),
+            AVG(LENGTH(r.column_name::TEXT))
+        FROM (SELECT * FROM r.table_name LIMIT 10000) t; -- Sample if needed
+    END LOOP;
+
+    INSERT INTO audit_logs(action_type, details)
+    VALUES ('DATA_PROFILING_RUN', jsonb_build_object('status', 'completed'));
+END;
+$$;
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 11
+-- DATABASE OBJECT NAME: idx_conversation_participants_composite
+-- DESCRIPTION: Composite index on conversation_id and user_id for fast lookup.
+-- DDL: CREATE INDEX idx_conversation_participants_composite ON conversation_participants(conversation_id, user_id);
+-- BUSINESS CASE: Speeds up inbox loading and participant validation.
+-- KPIs: Inbox load time, message send latency
+-- REFERENCE TABLES: conversation_participants
+-- -----------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_conversation_participants_composite
+ON conversation_participants(conversation_id, user_id);
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 12
+-- DATABASE OBJECT NAME: mv_platform_health_dashboard
+-- DESCRIPTION: Aggregates system health metrics for real-time operations monitoring.
+-- DDL: CREATE MATERIALIZED VIEW mv_platform_health_dashboard AS ...
+-- BUSINESS CASE: Central view for SRE teams and uptime monitoring systems.
+-- KPIs: System uptime, alert response time, MTTR
+-- REFERENCE TABLES: system_health_metrics, api_usage_metrics, moderation_workload_forecast
+-- -----------------------------------------------------------------------------
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_platform_health_dashboard AS
+SELECT
+    'system_cpu_usage' AS metric_type,
+    AVG(metric_value) AS value,
+    UNIT,
+    collected_at AS timestamp
+FROM system_health_metrics WHERE metric_name = 'cpu_usage' AND collected_at > NOW() - INTERVAL '1 hour'
+GROUP BY UNIT, collected_at
+
+UNION ALL
+
+SELECT
+    'api_error_rate' AS metric_type,
+    AVG(error_count::NUMERIC / NULLIF(call_count, 0)) * 100 AS value,
+    '%' AS unit,
+    day AS timestamp
+FROM api_usage_metrics WHERE day > CURRENT_DATE - INTERVAL '1 day'
+GROUP BY day
+
+UNION ALL
+
+SELECT
+    'moderation_backlog_forecast' AS metric_type,
+    SUM(projected_total_actions) AS value,
+    'actions' AS unit,
+    day AS timestamp
+FROM moderation_workload_forecast WHERE day >= CURRENT_DATE
+GROUP BY day;
+-- Note: This MV should be refreshed every 5–15 mins depending on SLA
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 13
+-- DATABASE OBJECT NAME: content_moderation_audit_log
+-- DESCRIPTION: Logs all AI and human moderation decisions with context.
+-- DDL: CREATE TABLE content_moderation_audit_log (...);
+-- BUSINESS CASE: Compliance with transparency requirements (e.g., EU DSA), appeals process.
+-- KPIs: Moderation appeal success rate, model accuracy over time
+-- REFERENCE TABLES: content_moderation, moderator_actions, users
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_moderation_audit_log (
+    audit_log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content_id INTEGER NOT NULL,
+    content_type VARCHAR(20) NOT NULL,
+    action_taken VARCHAR(50) NOT NULL, -- 'flagged', 'removed', 'allowed', 'overridden'
+    decision_source VARCHAR(20) NOT NULL CHECK (decision_source IN ('ai', 'human', 'hybrid')),
+    ai_toxicity_score DECIMAL(3,2),
+    ai_sentiment_score DECIMAL(3,2),
+    flagged_categories VARCHAR(255)[],
+    moderator_id INTEGER REFERENCES users(user_id),
+    guideline_id INTEGER REFERENCES community_guidelines(guideline_id),
+    review_notes TEXT,
+    decision_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    appeal_status VARCHAR(20) DEFAULT 'none' CHECK (appeal_status IN ('none', 'pending', 'granted', 'denied')),
+    context_snapshot JSONB -- Stores pre-action state of content
+);
+COMMENT ON TABLE content_moderation_audit_log IS 'Immutable log of all moderation decisions for audit, training, and compliance';
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 14
+-- DATABASE OBJECT NAME: sp_log_moderation_decision
+-- DESCRIPTION: Procedure to centralize logging of moderation actions across sources.
+-- DDL: CREATE OR REPLACE PROCEDURE sp_log_moderation_decision(...)
+-- BUSINESS CASE: Unified audit trail improves accountability and model retraining.
+-- KPIs: Decision traceability %, audit preparation time
+-- REFERENCE TABLES: content_moderation_audit_log, content_moderation, moderator_actions
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE sp_log_moderation_decision(
+    p_content_id INTEGER,
+    p_content_type VARCHAR,
+    p_action_taken VARCHAR,
+    p_decision_source VARCHAR,
+    p_moderator_id INTEGER DEFAULT NULL,
+    p_guideline_id INTEGER DEFAULT NULL,
+    p_review_notes TEXT DEFAULT '',
+    p_context_snapshot JSONB DEFAULT '{}'
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_ai_record RECORD;
+BEGIN
+    SELECT * INTO v_ai_record
+    FROM content_moderation
+    WHERE content_id = p_content_id AND content_type = p_content_type;
+
+    INSERT INTO content_moderation_audit_log (
+        content_id, content_type, action_taken, decision_source,
+        ai_toxicity_score, ai_sentiment_score, flagged_categories,
+        moderator_id, guideline_id, review_notes, context_snapshot
+    ) VALUES (
+        p_content_id, p_content_type, p_action_taken, p_decision_source,
+        v_ai_record.toxicity_score, v_ai_record.sentiment_score, v_ai_record.flagged_categories,
+        p_moderator_id, p_guideline_id, p_review_notes, p_context_snapshot
+    );
+END;
+$$;
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 15
+-- DATABASE OBJECT NAME: check_post_text_not_empty
+-- DESCRIPTION: Constraint to ensure post_text is not empty or whitespace-only.
+-- DDL: ALTER TABLE posts ADD CONSTRAINT check_post_text_not_empty CHECK (NULLIF(TRIM(post_text), '') IS NOT NULL);
+-- BUSINESS CASE: Maintains content quality and prevents spammy placeholder posts.
+-- KPIs: % of valid posts, spam report rate
+-- REFERENCE TABLES: posts
+-- -----------------------------------------------------------------------------
+ALTER TABLE posts
+ADD CONSTRAINT IF NOT EXISTS check_post_text_not_empty
+CHECK (NULLIF(TRIM(post_text), '') IS NOT NULL);
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 16
+-- DATABASE OBJECT NAME: idx_api_logs_endpoint_day
+-- DESCRIPTION: Composite index for high-cardinality filtering on API usage.
+-- DDL: CREATE INDEX idx_api_logs_endpoint_day ON api_logs(endpoint, called_at DESC);
+-- BUSINESS CASE: Optimizes performance of API analytics reports and anomaly detection.
+-- KPIs: Report generation time, API abuse detection speed
+-- REFERENCE TABLES: api_logs
+-- -----------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_api_logs_endpoint_day
+ON api_logs(endpoint, called_at DESC);
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 17
+-- DATABASE OBJECT NAME: partitioned_user_activity_logs
+-- DESCRIPTION: Recommends converting user_activity_logs to TimescaleDB hypertable.
+-- DDL: SELECT create_hypertable('user_activity_logs', 'activity_timestamp');
+-- BUSINESS CASE: Enables automatic time-based partitioning, compression, and faster time-series queries.
+-- KPIS: Ingestion throughput, query latency on large date ranges
+-- REFERENCE TABLES: user_activity_logs
+-- -----------------------------------------------------------------------------
+-- RECOMMENDED ACTION (requires TimescaleDB extension):
+-- CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- SELECT create_hypertable('user_activity_logs', 'activity_timestamp', chunk_time_interval => INTERVAL '1 day');
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 18
+-- DATABASE OBJECT NAME: mv_realtime_dau_rollup
+-- DESCRIPTION: Fast-refreshing materialized view for near real-time DAU/WAU/MAU.
+-- DDL: CREATE MATERIALIZED VIEW mv_realtime_dau_rollup AS ...
+-- BUSINESS CASE: Powers live dashboards for growth team and executives.
+-- KPIs: DAU/MAU ratio, user retention curve
+-- REFERENCE TABLES: user_activity_logs
+-- -----------------------------------------------------------------------------
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_realtime_dau_rollup AS
+SELECT
+    COUNT(DISTINCT user_id) FILTER (WHERE activity_timestamp >= CURRENT_DATE) AS dau,
+    COUNT(DISTINCT user_id) FILTER (WHERE activity_timestamp >= CURRENT_DATE - INTERVAL '6 days') AS wau,
+    COUNT(DISTINCT user_id) FILTER (WHERE activity_timestamp >= CURRENT_DATE - INTERVAL '29 days') AS mau,
+    ROUND(
+        100.0 * COUNT(DISTINCT user_id) FILTER (WHERE activity_timestamp >= CURRENT_DATE) /
+        NULLIF(COUNT(DISTINCT user_id) FILTER (WHERE activity_timestamp >= CURRENT_DATE - INTERVAL '29 days'), 0), 2
+    ) AS stickiness_percentage
+FROM user_activity_logs
+WHERE activity_timestamp >= CURRENT_DATE - INTERVAL '29 days';
+-- Refresh strategy: Every 15 minutes via cron or pg_cron
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 19
+-- DATABASE OBJECT NAME: sp_calculate_kpis_daily
+-- DESCRIPTION: Orchestration procedure to calculate key business KPIs daily.
+-- DDL: CREATE OR REPLACE PROCEDURE sp_calculate_kpis_daily()
+-- BUSINESS CASE: Automates reporting cycle and ensures consistent metric definitions.
+-- KPIs: Executive report timeliness, metric definition drift
+-- REFERENCE VIEWS: mv_realtime_dau_rollup, mv_daily_engagement_summary
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE sp_calculate_kpis_daily()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    CALL sp_refresh_daily_engagement_summary();
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_realtime_dau_rollup;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_campaign_performance;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_active_user_segments;
+
+    INSERT INTO kpi_metrics (metric_name, metric_value, time_period, metric_date)
+    SELECT 'DAU', dau, 'daily', CURRENT_DATE FROM mv_realtime_dau_rollup
+    UNION ALL
+    SELECT 'WAU', wau, 'weekly', CURRENT_DATE FROM mv_realtime_dau_rollup
+    UNION ALL
+    SELECT 'MAU', mau, 'monthly', CURRENT_DATE FROM mv_realtime_dau_rollup
+    UNION ALL
+    SELECT 'Stickiness', stickiness_percentage, 'daily', CURRENT_DATE FROM mv_realtime_dau_rollup;
+
+    INSERT INTO audit_logs(action_type, details)
+    VALUES ('DAILY_KPI_CALCULATION', jsonb_build_object('status', 'completed', 'date', CURRENT_DATE));
+END;
+$$;
+
+
+-- -----------------------------------------------------------------------------
+-- SERIAL NO: 20
+-- DATABASE OBJECT NAME: check_notification_queue_status_transition
+-- DESCRIPTION: Enforces valid state transitions in notification_queue.status.
+-- DDL: ALTER TABLE notification_queue ADD CONSTRAINT check_notification_queue_status_transition CHECK (...);
+-- BUSINESS CASE: Prevents invalid workflow states (e.g., delivered → pending).
+-- KPIs: Notification delivery failure rate, retry loop avoidance
+-- REFERENCE TABLES: notification_queue
+-- -----------------------------------------------------------------------------
+ALTER TABLE notification_queue
+ADD CONSTRAINT IF NOT EXISTS check_notification_queue_status_transition
+CHECK (
+    (status = 'pending' AND processed_at IS NULL) OR
+    (status = 'delivered' AND processed_at IS NOT NULL) OR
+    (status = 'failed' AND processed_at IS NOT NULL)
+);
