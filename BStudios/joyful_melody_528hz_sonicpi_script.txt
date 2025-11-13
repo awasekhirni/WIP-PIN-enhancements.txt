@@ -1,0 +1,127 @@
+
+/*
+ * Jolly go around music as code for sonic pi 
+ *--Copyright 2025 β ORI Inc.Canada All Rights Reserved.
+ * Author: Awase Khirni Syed
+*/
+# Active 528Hz Energy Composition
+use_bpm 128
+
+live_loop :driving_bass do
+  # Powerful 528Hz bass foundation
+  use_synth :saw
+  use_synth_defaults attack: 0.1, release: 0.3, cutoff: 80
+  play 48, amp: 0.8 # C2 (close to 528Hz range)
+  play 52, amp: 0.6 # E2
+  sleep 0.5
+  play 48, amp: 0.8
+  sleep 0.5
+  play 55, amp: 0.7 # G2
+  sleep 0.5
+  play 48, amp: 0.8
+  sleep 0.5
+end
+
+live_loop :pulse_528 do
+  # Pulsating 528Hz arpeggio
+  use_synth :sine
+  with_fx :lpf, cutoff: 110 do
+    play 76, amp: 0.4, release: 0.2 # E5 (approx 659Hz - related to 528)
+    sleep 0.25
+    play 79, amp: 0.3, release: 0.2 # G5
+    sleep 0.25
+    play 84, amp: 0.4, release: 0.2 # C6
+    sleep 0.25
+    play 79, amp: 0.3, release: 0.2 # G5
+    sleep 0.25
+  end
+end
+
+live_loop :energetic_drums do
+  # Driving drum pattern
+  sample :bd_haus, amp: 1.2
+  sleep 0.5
+  sample :drum_snare_hard, amp: 0.8
+  sleep 0.5
+  sample :bd_haus, amp: 1.2
+  sleep 0.25
+  sample :drum_cymbal_closed, amp: 0.3
+  sleep 0.25
+  sample :drum_snare_hard, amp: 0.8
+  sleep 0.5
+end
+
+live_loop :hi_hats do
+  # Constant energy from hi-hats
+  sample :drum_cymbal_pedal, amp: 0.2
+  sleep 0.125
+end
+
+live_loop :chord_progression do
+  # Uplifting chord progression based on 528Hz harmony
+  use_synth :hollow
+  with_fx :reverb, room: 0.4 do
+    play_chord chord(:c3, :maj), amp: 0.6, attack: 0.1, release: 1.5
+    sleep 1.5
+    play_chord chord(:g3, :maj), amp: 0.5, attack: 0.1, release: 1.5
+    sleep 1.5
+    play_chord chord(:a3, :min), amp: 0.5, attack: 0.1, release: 1.5
+    sleep 1
+    play_chord chord(:f3, :maj), amp: 0.6, attack: 0.1, release: 1.5
+    sleep 1
+  end
+end
+
+live_loop :main_528_melody do
+  # Main melodic theme around 528Hz
+  use_synth :prophet
+  notes = [:c5, :e5, :g5, :c6, :e5, :g5, :a5, :g5]
+  durations = [0.5, 0.5, 0.5, 1, 0.25, 0.25, 0.5, 0.5]
+  
+  with_fx :echo, phase: 0.75, decay: 2 do
+    notes.each_with_index do |n, i|
+      play n, amp: 0.4, release: 0.3, cutoff: rrand(80, 110)
+      sleep durations[i]
+    end
+  end
+end
+
+live_loop :filter_sweep do
+  # Dynamic filter modulation
+  with_fx :lpf, cutoff: 60 do
+    with_fx :hpf, cutoff: 40 do
+      sleep 8
+    end
+  end
+end
+
+live_loop :rising_energy do
+  # Rising energy sweeps every 16 beats
+  use_synth :sine
+  with_fx :reverb, room: 0.7 do
+    play 84, amp: 0.3, attack: 1, release: 3, cutoff: 120 # C6
+    sleep 16
+  end
+end
+
+live_loop :percussion_texture do
+  # Additional percussion layers
+  sample :perc_snap, amp: 0.3, rate: 1.5
+  sleep 2
+  sample :perc_snap, amp: 0.2, rate: 0.8
+  sleep 2
+  sample :tabla_tas1, amp: 0.4
+  sleep 1
+end
+
+live_loop :bass_variation do
+  # Bass variation every 32 beats
+  sleep 32
+  use_synth :saw
+  with_fx :distortion, distort: 0.3 do
+    play 36, amp: 1.0, release: 0.5, cutoff: 60 # C1
+    sleep 1
+    play 41, amp: 0.8, release: 0.5, cutoff: 60 # F1
+    sleep 1
+  end
+end
