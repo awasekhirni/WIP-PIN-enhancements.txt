@@ -1,0 +1,119 @@
+/*
+ * laila laila music as code for sonic pi 
+ *--Copyright 2025 β ORI Inc.Canada All Rights Reserved.
+ * Author: Awase Khirni Syed
+*/
+# Laila Laila - Sonic Pi Version
+# Music by Amit Trivedi, Lyrics by Jaideep Sahni
+
+use_bpm 120  # Romantic slow tempo
+
+# Main melodic theme - captures the romantic essence
+define :main_melody do |amp=1|
+  use_synth :piano
+  play_pattern_timed [:c4, :e4, :g4, :c5], [0.5, 0.5, 0.5, 1], amp: amp, release: 0.3
+  play_pattern_timed [:b4, :a4, :g4, :e4], [0.5, 0.5, 0.5, 1], amp: amp, release: 0.3
+  play_pattern_timed [:a4, :c5, :e5, :a5], [0.5, 0.5, 0.5, 1], amp: amp, release: 0.3
+  play_pattern_timed [:g5, :e5, :c5, :a4], [0.5, 0.5, 0.5, 1], amp: amp, release: 0.3
+end
+
+# Harmonic accompaniment
+define :harmony do |amp=0.6|
+  use_synth :piano
+  play_chord chord(:c3, :maj), amp: amp, release: 2
+  sleep 2
+  play_chord chord(:g3, :maj), amp: amp, release: 2
+  sleep 2
+  play_chord chord(:a3, :min), amp: amp, release: 2
+  sleep 2
+  play_chord chord(:f3, :maj), amp: amp, release: 2
+  sleep 2
+end
+
+# Bass line foundation
+define :bass_line do |amp=0.8|
+  use_synth :piano
+  play :c2, amp: amp, release: 1.5
+  sleep 2
+  play :g2, amp: amp, release: 1.5
+  sleep 2
+  play :a2, amp: amp, release: 1.5
+  sleep 2
+  play :g2, amp: amp, release: 1.5
+  sleep 2
+end
+
+# Arpeggio texture
+define :arpeggio_texture do |amp=0.4|
+  use_synth :piano
+  play_pattern_timed chord(:c4, :maj7), [0.25, 0.25, 0.25, 0.25], amp: amp, release: 0.2
+  sleep 1
+  play_pattern_timed chord(:g4, :maj7), [0.25, 0.25, 0.25, 0.25], amp: amp, release: 0.2
+  sleep 1
+  play_pattern_timed chord(:a4, :min7), [0.25, 0.25, 0.25, 0.25], amp: amp, release: 0.2
+  sleep 1
+  play_pattern_timed chord(:f4, :maj7), [0.25, 0.25, 0.25, 0.25], amp: amp, release: 0.2
+  sleep 1
+end
+
+# Live loops for the complete composition
+live_loop :laila_melody do
+  with_fx :reverb, room: 0.6 do
+    main_melody(0.8)
+  end
+  sleep 8
+end
+
+live_loop :laila_harmony do
+  with_fx :lpf, cutoff: 90 do
+    harmony(0.5)
+  end
+end
+
+live_loop :laila_bass do
+  with_fx :level, amp: 0.7 do
+    bass_line(0.6)
+  end
+end
+
+live_loop :laila_arpeggio do
+  with_fx :echo, phase: 0.75, decay: 4 do
+    arpeggio_texture(0.3)
+  end
+end
+
+# Gentle percussion for rhythm
+live_loop :gentle_rhythm do
+  sample :drum_tom_hi_soft, amp: 0.3, rate: 0.8
+  sleep 4
+  sample :drum_tom_mid_soft, amp: 0.2, rate: 0.9
+  sleep 4
+end
+
+# Emotional string pads
+live_loop :string_pads do
+  use_synth :hollow
+  with_fx :reverb, room: 0.8 do
+    play_chord chord(:c4, :maj9), amp: 0.3, attack: 1, release: 7
+    sleep 8
+    play_chord chord(:a3, :min9), amp: 0.25, attack: 1, release: 7
+    sleep 8
+  end
+end
+
+# Occasional vocal-like synth for melody emphasis
+live_loop :vocal_emphasis do
+  sleep 16  # Wait for 16 beats before entering
+  use_synth :saw
+  with_fx :reverb, room: 0.7 do
+    play :c5, amp: 0.2, attack: 0.5, release: 2
+    sleep 2
+    play :e5, amp: 0.18, attack: 0.5, release: 2
+    sleep 2
+    play :g5, amp: 0.2, attack: 0.5, release: 2
+    sleep 2
+    play :a5, amp: 0.18, attack: 0.5, release: 2
+    sleep 2
+  end
+  sleep 16  # Wait before next entry
+end
