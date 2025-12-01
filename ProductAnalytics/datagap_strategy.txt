@@ -20,4 +20,10 @@
 
 5. Technical Assessment Methods
    a. Data Source Inventory: We should catalog all existing data soruces and their update frequencies/ coverage, accuracy, ontology and metadata associated with it 
-   b. schema analysis:
+   b. schema analysis: periodically review database schemas and event taxonomies for completeness and consistency 
+   c. data quality audits: implement and automate data quality checks at the source. implement systemic checks for data accuracy, completeness and freshness at each stage. a single dashboard view for monitoring data quality changes over time
+   d. instrumentation code review: we need to audit tracking implementation for missing events  or properties. We should have a world class distributed logging framework. Our custom logging framework is detailed, but we need to keep enhancing this. 
+
+6. Analytical Technicques
+  a. counterfactual analysis
+   
