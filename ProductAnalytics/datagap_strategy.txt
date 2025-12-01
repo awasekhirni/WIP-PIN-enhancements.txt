@@ -1,0 +1,6 @@
+#Copyright 2025 Beta ORI Inc. Canada. Awase Khirni Syed 
+# Strategies for Identifying Data Gaps in Current Product Analytics 
+
+1. Process-focused approach
+  # event-mapping audit: by performaning an event mapping audit, we coudl create a comprehensive map of all user journeys and interactions. This would help us to systematically check instrumentation for each step 
+2. 
