@@ -3,4 +3,21 @@
 
 1. Process-focused approach
   # event-mapping audit: by performaning an event mapping audit, we coudl create a comprehensive map of all user journeys and interactions. This would help us to systematically check instrumentation for each step 
-2. 
+2. Hypothesis-Driven gap Analysis
+  # Identify key business questions that are important for business. 
+  # work backwards to identify what data would be needed to answer them 
+3. Funnel Analysis/Sales Analysis
+  #Identify drop-off points where we lack visibility into user behaviour or decision-making 
+
+4. Perform Cross-Functional Reviews
+ #Stakeholder Interviews:
+   a. Regularly interview teams ( product, marketing, sales, support about their data needs and pain points) 
+   b. observe, analyze customer interactions. record most used features and business processes, identify least used features and why
+   c. build user stores and map busines processes to these user stories 
+   d. customer read-out stores for their use cases 
+   e. use case workshops:organize collaborative sessions where teams walk through specific analysis they wish to perform 
+   f. competitor & industry benchmarking: compare current available metrics against industry standards and competitor analysis. 
+
+5. Technical Assessment Methods
+   a. Data Source Inventory: We should catalog all existing data soruces and their update frequencies/ coverage, accuracy, ontology and metadata associated with it 
+   b. schema analysis:
