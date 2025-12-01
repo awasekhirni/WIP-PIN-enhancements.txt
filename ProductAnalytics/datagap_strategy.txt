@@ -30,5 +30,10 @@
   c. longitudinal analysis chekc: to assess whether we can track user behaviour over meaningful time periods
   d. attribution analysis: review whether we can connect user actions to outcomes across various touchpoints. 
 
+What frameworks ? 
+
+HEART Framework Application Approach to check coverage for Happiness, Engagement, Adoption, Retention, and Task success metrics 
+Pirate Metrics (AARRR): Audit metrics for Acquisition, Activation, Retention, Revenue and Referral 
+
 
    
