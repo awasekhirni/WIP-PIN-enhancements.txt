@@ -35,5 +35,5 @@ What frameworks ?
 HEART Framework Application Approach to check coverage for Happiness, Engagement, Adoption, Retention, and Task success metrics 
 Pirate Metrics (AARRR): Audit metrics for Acquisition, Activation, Retention, Revenue and Referral 
 
-
+"Jobs to be Done Mapping" - a simple metrics to understand what data would help understand the core critical hobs the current product serves to do and how successfully does it deliver.
    
