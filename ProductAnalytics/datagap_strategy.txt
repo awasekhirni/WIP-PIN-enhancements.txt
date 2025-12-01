@@ -25,5 +25,10 @@
    d. instrumentation code review: we need to audit tracking implementation for missing events  or properties. We should have a world class distributed logging framework. Our custom logging framework is detailed, but we need to keep enhancing this. 
 
 6. Analytical Technicques
-  a. counterfactual analysis
+  a. counterfactual analysis: identify what data is required to establish causaility rather than correlation 
+  b. segmentation capability assessment: evalauate where each user segment has meaningful characteristics 
+  c. longitudinal analysis chekc: to assess whether we can track user behaviour over meaningful time periods
+  d. attribution analysis: review whether we can connect user actions to outcomes across various touchpoints. 
+
+
    
