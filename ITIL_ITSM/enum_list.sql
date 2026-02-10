@@ -1,3 +1,11 @@
+-- =============================================
+-- PostgreSQL Schema for Human Resource Management System
+-- Version: 2.0
+-- Copyright 2025 All rights reserved β ORI Inc.
+-- Created: 2025-05-29
+-- Last Updated: 2025-06-15
+--Author: Awase Khirni Syed
+--=======================================
 
 -- Enum: DATA_SUBJECT_REQUEST_TYPE
 -- Description: Defines the types of data subject requests under privacy regulations
