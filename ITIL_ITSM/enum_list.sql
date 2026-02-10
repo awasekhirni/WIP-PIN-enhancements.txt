@@ -1,5 +1,5 @@
 -- =============================================
--- PostgreSQL Schema for Human Resource Management System
+-- ASSETIQ PLATFORM
 -- Version: 2.0
 -- Copyright 2025 All rights reserved β ORI Inc.
 -- Created: 2025-05-29
