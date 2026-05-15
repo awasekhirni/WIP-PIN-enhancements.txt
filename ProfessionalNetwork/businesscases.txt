@@ -1,0 +1,1960 @@
+--Copyright 2025-26 Beta ORI Inc. Canada. All Rights Reserved. 
+-- Author: Awase Khirni Syed 
+
+-- Table: users
+-- Description: Core user accounts with authentication data.
+-- Business Case: Enables user authentication and profile management from registration through deactivation.
+-- KPIs: Registration success rate, active user count, login failure rate.
+-- Feature Reference: CORE01 (User Management)
+
+-- Table: user_profiles
+-- Description: Extended user profile information.
+-- Business Case: Stores comprehensive professional details for networking and recruitment.
+-- KPIs: Profile completion rate, profile view frequency.
+-- Feature Reference: CORE02 (Profile Management)
+
+-- Table: user_roles
+-- Description: Junction table linking users to their assigned roles.
+-- Business Case: Enables flexible role-based access control (RBAC).
+-- KPIs: Role assignment latency, unauthorized access attempts.
+-- Feature Reference: AUTH01 (Role Management)
+
+-- Table: roles
+-- Description: User roles for authorization and access control.
+-- Business Case: Defines permission sets for system access and functionality.
+-- KPIs: Role coverage, permission granularity.
+-- Feature Reference: AUTH02 (Authorization)
+
+-- Table: users_history
+-- Description: Historical record of user account changes for audit purposes.
+-- Business Case: Provides audit trail for compliance and security incident investigation.
+-- KPIs: Audit log completeness, audit retrieval time.
+-- Feature Reference: AUDIT01 (User Audit Trail)
+
+-- Table: user_education
+-- Description: User educational background.
+-- Business Case: Stores academic history for profile verification and matching.
+-- KPIs: Education data accuracy, verification rate.
+-- Feature Reference: PROF01 (Education History)
+
+-- Table: user_certifications
+-- Description: User professional certifications.
+-- Business Case: Tracks professional qualifications and expiry dates.
+-- KPIs: Certification verification rate, expired certification alerts.
+-- Feature Reference: PROF02 (Certifications)
+
+-- Table: user_languages
+-- Description: Languages spoken by the user.
+-- Business Case: Supports localization and language-based matching.
+-- KPIs: Language coverage, localization accuracy.
+-- Feature Reference: PROF03 (Language Preferences)
+
+-- Table: user_achievements
+-- Description: User honors, awards, and significant achievements.
+-- Business Case: Highlights professional milestones for networking.
+-- KPIs: Achievement display rate, user recognition rate.
+-- Feature Reference: PROF04 (Achievements)
+
+-- Table: user_portfolio
+-- Description: User portfolio items showcasing work.
+-- Business Case: Enables users to demonstrate practical skills and experience.
+-- KPIs: Portfolio item count, portfolio view rate.
+-- Feature Reference: PROF05 (Portfolio Management)
+
+-- Table: user_publications
+-- Description: User published works.
+-- Business Case: Tracks academic or professional publications for credibility.
+-- KPIs: Publication citation count, publication view rate.
+-- Feature Reference: PROF06 (Publications)
+
+-- Table: user_patents
+-- Description: User patents.
+-- Business Case: Documents intellectual property ownership.
+-- KPIs: Patent verification rate, IP disclosure accuracy.
+-- Feature Reference: PROF07 (Intellectual Property)
+
+-- Table: user_volunteering
+-- Description: User volunteering experience.
+-- Business Case: Highlights community service and non-profit experience.
+-- KPIs: Volunteering data completeness, volunteer matching success.
+-- Feature Reference: PROF08 (Volunteering History)
+
+-- Table: user_interests
+-- Description: User interests.
+-- Business Case: Supports interest-based networking and content recommendations.
+-- KPIs: Interest tag usage, recommendation click-through rate.
+-- Feature Reference: PROF09 (Interest Tracking)
+
+-- Table: user_preferences
+-- Description: User application preferences and settings.
+-- Business Case: Personalizes user experience across the platform.
+-- KPIs: Preference save rate, setting adoption rate.
+-- Feature Reference: CORE03 (User Preferences)
+
+-- Table: user_privacy_settings
+-- Description: Granular user privacy settings.
+-- Business Case: Enables users to control data visibility and compliance.
+-- KPIs: Privacy setting adoption rate, data access request resolution.
+-- Feature Reference: PRIV01 (Privacy Controls)
+
+-- Table: user_device_history
+-- Description: History of devices used by the user.
+-- Business Case: Tracks device usage for security and session management.
+-- KPIs: Device recognition accuracy, unauthorized device detection.
+-- Feature Reference: SEC01 (Device Tracking)
+
+-- Table: user_login_history
+-- Description: User login attempts history.
+-- Business Case: Monitors authentication patterns for security auditing.
+-- KPIs: Failed login rate, successful login count, anomaly detection time.
+-- Feature Reference: SEC02 (Login History)
+
+-- Table: user_notifications
+-- Description: User notifications for system and social updates.
+-- Business Case: Keeps users informed about platform activity and interactions.
+-- KPIs: Notification delivery rate, notification open rate.
+-- Feature Reference: NOTIF01 (User Notifications)
+
+-- Table: user_saved_items
+-- Description: Items saved by the user for later reference.
+-- Business Case: Allows users to bookmark content, jobs, and profiles.
+-- KPIs: Save rate, saved item retrieval rate.
+-- Feature Reference: PROF10 (Saved Items)
+
+-- Table: user_blocks
+-- Description: Users blocked by other users.
+-- Business Case: Manages user safety and harassment prevention.
+-- KPIs: Block action count, blocked user recurrence rate.
+-- Feature Reference: SAF01 (Blocking System)
+
+-- Table: user_follows
+-- Description: User following relationships (users, companies, topics).
+-- Business Case: Enables feed generation and content subscription.
+-- KPIs: Follow action rate, feed engagement rate.
+-- Feature Reference: NET01 (Follow System)
+
+-- Table: user_profile_views_analytics
+-- Description: Analytics for profile views.
+-- Business Case: Provides insights into profile popularity and visitor demographics.
+-- KPIs: Profile view count, unique viewer count.
+-- Feature Reference: ANA01 (Profile Analytics)
+
+-- Table: user_profile_completion
+-- Description: Tracks user profile completion status.
+-- Business Case: Encourages users to complete their profiles for better matching.
+-- KPIs: Profile completion rate, average completion percentage.
+-- Feature Reference: PROF11 (Profile Completion)
+
+-- Table: user_reputation
+-- Description: Trust and reputation scores for users.
+-- Business Case: Quantifies user reliability and expertise.
+-- KPIs: Reputation score distribution, score update frequency.
+-- Feature Reference: TRUST01 (Reputation System)
+
+-- Table: user_activities
+-- Description: User activity tracking for analytics.
+-- Business Case: Logs user interactions for behavioral analysis and optimization.
+-- KPIs: Activity event volume, active user rate.
+-- Feature Reference: ANA02 (Activity Tracking)
+
+-- Table: user_engagement_metrics
+-- Description: Daily user engagement metrics.
+-- Business Case: Monitors user interaction levels and retention.
+-- KPIs: Daily active users (DAU), session duration, engagement score.
+-- Feature Reference: ANA03 (Engagement Metrics)
+
+-- Table: sessions
+-- Description: Active user sessions with comprehensive security and device tracking.
+-- Business Case: Manages authentication tokens and session lifecycle securely.
+-- KPIs: Session creation rate, session timeout rate.
+-- Feature Reference: AUTH03 (Session Management)
+
+-- Table: api_keys
+-- Description: API credentials for programmatic platform access.
+-- Business Case: Enables secure third-party integrations and API access.
+-- KPIs: API key creation rate, key revocation count.
+-- Feature Reference: API01 (API Key Management)
+
+-- Table: api_key_usage_logs
+-- Description: Comprehensive logging of all API requests.
+-- Business Case: Tracks API usage for billing, security, and performance.
+-- KPIs: API request volume, error rate, rate limit hits.
+-- Feature Reference: API02 (API Usage Logs)
+
+-- Table: oauth_connections
+-- Description: Links user accounts to external identity providers.
+-- Business Case: Supports social login and external authentication.
+-- KPIs: OAuth connection success rate, provider adoption rate.
+-- Feature Reference: AUTH04 (OAuth Integration)
+
+-- Table: idempotency_keys
+-- Description: Idempotency key storage for exactly-once API processing.
+-- Business Case: Prevents duplicate API requests and ensures data consistency.
+-- KPIs: Duplicate request prevention rate, idempotency key expiration rate.
+-- Feature Reference: API03 (Idempotency)
+
+-- Table: user_connections
+-- Description: Network connections between users with partitioning by date.
+-- Business Case: Manages professional network relationships and connections.
+-- KPIs: Connection growth rate, mutual connection count.
+-- Feature Reference: NET02 (Connections)
+
+-- Table: profile_visits
+-- Description: Record of user profile visits with partitioning by date.
+-- Business Case: Tracks profile visitation for analytics and privacy.
+-- KPIs: Profile visit frequency, anonymous visit rate.
+-- Feature Reference: ANA04 (Visit Tracking)
+
+-- Table: skill_categories
+-- Description: Hierarchical categories for skills.
+-- Business Case: Organizes skills into a structured taxonomy.
+-- KPIs: Category utilization, hierarchy depth.
+-- Feature Reference: SKILL01 (Skill Categories)
+
+-- Table: skills
+-- Description: Skills that can be added to user profiles.
+-- Business Case: Defines the master list of professional skills.
+-- KPIs: Skill count, skill usage frequency.
+-- Feature Reference: SKILL02 (Skill Library)
+
+-- Table: user_skills
+-- Description: Skills associated with user profiles.
+-- Business Case: Links users to their verified and self-reported skills.
+-- KPIs: Skill endorsement rate, skill verification rate.
+-- Feature Reference: SKILL03 (User Skills)
+
+-- Table: skill_endorsements
+-- Description: Endorsements of user skills by other users.
+-- Business Case: Provides peer validation for user skills.
+-- KPIs: Endorsement count per skill, endorsement authenticity score.
+-- Feature Reference: SKILL04 (Skill Endorsements)
+
+-- Table: content_types
+-- Description: Types of content that can be created by users.
+-- Business Case: Defines supported content formats (article, post, video).
+-- KPIs: Content type distribution, format adoption rate.
+-- Feature Reference: CONT01 (Content Types)
+
+-- Table: content_categories
+-- Description: Categories for organizing content.
+-- Business Case: Structures content for better discovery and navigation.
+-- KPIs: Category coverage, content categorization accuracy.
+-- Feature Reference: CONT02 (Content Categories)
+
+-- Table: contents
+-- Description: User-generated content such as articles, posts, and updates.
+-- Business Case: Stores the primary content created by users.
+-- KPIs: Content creation rate, content view count.
+-- Feature Reference: CONT03 (Content Management)
+
+-- Table: content_categories_map
+-- Description: Junction table mapping content to categories.
+-- Business Case: Enables multi-categorization of content items.
+-- KPIs: Category mapping count, mapping accuracy.
+-- Feature Reference: CONT04 (Category Mapping)
+
+-- Table: content_versions
+-- Description: Historical versions of content for tracking changes.
+-- Business Case: Tracks content edits and provides version history.
+-- KPIs: Version history length, edit frequency.
+-- Feature Reference: CONT05 (Version Control)
+
+-- Table: content_comments
+-- Description: Comments on content items.
+-- Business Case: Enables user interaction and discussion on content.
+-- KPIs: Comment count per content, comment sentiment.
+-- Feature Reference: CONT06 (Comments)
+
+-- Table: content_likes
+-- Description: Likes on content items.
+-- Business Case: Tracks positive user reactions to content.
+-- KPIs: Like count, like-to-view ratio.
+-- Feature Reference: CONT07 (Likes)
+
+-- Table: content_shares
+-- Description: Shares of content items.
+-- Business Case: Measures content virality and sharing behavior.
+-- KPIs: Share count, share platform distribution.
+-- Feature Reference: CONT08 (Shares)
+
+-- Table: content_bookmarks
+-- Description: Bookmarks for content items.
+-- Business Case: Allows users to save content for later access.
+-- KPIs: Bookmark count, bookmark retrieval rate.
+-- Feature Reference: CONT09 (Bookmarks)
+
+-- Table: content_reports
+-- Description: Reports submitted against content items.
+-- Business Case: Enables moderation through user reporting.
+-- KPIs: Report submission count, false report rate.
+-- Feature Reference: MOD01 (Content Reporting)
+
+-- Table: content_analytics
+-- Description: Aggregated analytics for content items.
+-- Business Case: Provides performance metrics for content creators.
+-- KPIs: Content engagement score, performance trend.
+-- Feature Reference: ANA05 (Content Analytics)
+
+-- Table: content_tags
+-- Description: Tags for categorizing content.
+-- Business Case: Enables flexible content tagging and search.
+-- KPIs: Tag usage count, tag relevance score.
+-- Feature Reference: CONT10 (Content Tags)
+
+-- Table: content_tag_map
+-- Description: Mapping content items to tags.
+-- Business Case: Links content to relevant tags for discovery.
+-- KPIs: Tag mapping accuracy, tag association count.
+-- Feature Reference: CONT11 (Tag Mapping)
+
+-- Table: content_mentions
+-- Description: Mentions of users within content.
+-- Business Case: Notifies users and tracks mentions across content.
+-- KPIs: Mention count, notification delivery rate.
+-- Feature Reference: CONT12 (Mentions)
+
+-- Table: content_polls
+-- Description: Polls associated with content items.
+-- Business Case: Enables interactive polling within content.
+-- KPIs: Poll participation rate, poll completion rate.
+-- Feature Reference: CONT13 (Polls)
+
+-- Table: content_poll_options
+-- Description: Options for a content poll.
+-- Business Case: Defines the choices available in polls.
+-- KPIs: Option selection distribution.
+-- Feature Reference: CONT14 (Poll Options)
+
+-- Table: content_poll_votes
+-- Description: Votes cast in content polls.
+-- Business Case: Records user votes for poll results.
+-- KPIs: Vote count, voting participation rate.
+-- Feature Reference: CONT15 (Poll Voting)
+
+-- Table: content_media
+-- Description: Media files associated with content.
+-- Business Case: Stores images, videos, and documents linked to content.
+-- KPIs: Media upload count, media processing time.
+-- Feature Reference: CONT16 (Media Management)
+
+-- Table: content_drafts
+-- Description: Drafts of content being created.
+-- Business Case: Allows users to save incomplete content for later.
+-- KPIs: Draft save rate, draft completion rate.
+-- Feature Reference: CONT17 (Drafts)
+
+-- Table: content_revisions
+-- Description: Revisions history for content (alternative to content_versions).
+-- Business Case: Tracks changes for audit and rollback purposes.
+-- KPIs: Revision count, rollback frequency.
+-- Feature Reference: CONT18 (Revisions)
+
+-- Table: content_translations
+-- Description: Translations of content items.
+-- Business Case: Supports multi-language content delivery.
+-- KPIs: Translation coverage, translation accuracy.
+-- Feature Reference: LOC01 (Content Translation)
+
+-- Table: content_schedules
+-- Description: Scheduled publishing for content.
+-- Business Case: Allows users to schedule content for future publication.
+-- KPIs: Scheduled publish success rate, schedule adoption rate.
+-- Feature Reference: CONT19 (Scheduled Publishing)
+
+-- Table: content_series
+-- Description: Series or collections of related content.
+-- Business Case: Groups related content into series for better organization.
+-- KPIs: Series creation count, series completion rate.
+-- Feature Reference: CONT20 (Content Series)
+
+-- Table: content_series_map
+-- Description: Mapping content items to series.
+-- Business Case: Links content to their respective series.
+-- KPIs: Series mapping accuracy, content series count.
+-- Feature Reference: CONT21 (Series Mapping)
+
+-- Table: content_collections
+-- Description: User-curated collections of content.
+-- Business Case: Allows users to create custom content collections.
+-- KPIs: Collection creation rate, collection view count.
+-- Feature Reference: CONT22 (Collections)
+
+-- Table: content_collection_items
+-- Description: Items within a user collection.
+-- Business Case: Manages the content items added to collections.
+-- KPIs: Item addition rate, collection size distribution.
+-- Feature Reference: CONT23 (Collection Items)
+
+-- Table: content_collaborators
+-- Description: Collaborators on content items.
+-- Business Case: Tracks co-authors and contributors to content.
+-- KPIs: Collaboration rate, collaborator count per content.
+-- Feature Reference: CONT24 (Collaboration)
+
+-- Table: content_permissions
+-- Description: Granular permissions for content access.
+-- Business Case: Controls access to content at a granular level.
+-- KPIs: Permission change rate, access denial count.
+-- Feature Reference: CONT25 (Content Permissions)
+
+-- Table: content_monetization
+-- Description: Monetization settings for content.
+-- Business Case: Enables paywalls and paid content features.
+-- KPIs: Monetized content count, conversion rate.
+-- Feature Reference: BILL01 (Content Monetization)
+
+-- Table: content_performance_metrics
+-- Description: Daily performance metrics for content.
+-- Business Case: Tracks daily performance trends for content.
+-- KPIs: Daily engagement score, performance trend accuracy.
+-- Feature Reference: ANA06 (Daily Metrics)
+
+-- Table: conversations
+-- Description: Messaging conversations between users.
+-- Business Case: Manages direct and group messaging sessions.
+-- KPIs: Conversation count, message exchange rate.
+-- Feature Reference: MSG01 (Conversations)
+
+-- Table: conversation_participants
+-- Description: Maps users to conversations with role and settings.
+-- Business Case: Manages participant access and permissions in conversations.
+-- KPIs: Participant addition rate, mute/archive rate.
+-- Feature Reference: MSG02 (Participants)
+
+-- Table: messages
+-- Description: Individual messages within conversations.
+-- Business Case: Stores the content of individual messages.
+-- KPIs: Message send rate, message delivery success rate.
+-- Feature Reference: MSG03 (Messages)
+
+-- Table: message_attachments
+-- Description: File attachments to messages.
+-- Business Case: Stores files, images, and documents sent in messages.
+-- KPIs: Attachment upload count, attachment processing time.
+-- Feature Reference: MSG04 (Attachments)
+
+-- Table: message_reactions
+-- Description: Reactions to messages.
+-- Business Case: Enables emoji reactions and quick feedback on messages.
+-- KPIs: Reaction count per message, reaction diversity.
+-- Feature Reference: MSG05 (Reactions)
+
+-- Table: message_read_status
+-- Description: Tracks read status of messages per user.
+-- Business Case: Provides read receipts for message conversations.
+-- KPIs: Read receipt delivery rate, read latency.
+-- Feature Reference: MSG06 (Read Receipts)
+
+-- Table: message_templates
+-- Description: User-defined message templates/canned responses.
+-- Business Case: Enables quick replies using pre-defined templates.
+-- KPIs: Template usage rate, template creation count.
+-- Feature Reference: MSG07 (Templates)
+
+-- Table: message_folders
+-- Description: User-defined folders for organizing conversations.
+-- Business Case: Helps users organize and categorize conversations.
+-- KPIs: Folder creation rate, folder utilization.
+-- Feature Reference: MSG08 (Folders)
+
+-- Table: message_settings
+-- Description: User settings related to messaging.
+-- Business Case: Manages notification preferences and messaging privacy.
+-- KPIs: Setting change rate, preference adoption.
+-- Feature Reference: MSG09 (Message Settings)
+
+-- Table: message_analytics
+-- Description: Analytics related to user messaging activity.
+-- Business Case: Provides insights into messaging patterns and engagement.
+-- KPIs: Message volume trend, response rate.
+-- Feature Reference: ANA07 (Message Analytics)
+
+-- Table: companies
+-- Description: Company profiles for employers and organizations.
+-- Business Case: Stores detailed information about companies.
+-- KPIs: Company profile completeness, company follow rate.
+-- Feature Reference: CO01 (Company Profiles)
+
+-- Table: company_admins
+-- Description: Users with administrative access to company profiles.
+-- Business Case: Manages administrative permissions for company pages.
+-- KPIs: Admin assignment count, admin activity rate.
+-- Feature Reference: CO02 (Company Admins)
+
+-- Table: company_locations
+-- Description: Physical locations of company offices.
+-- Business Case: Stores office locations for geographic mapping.
+-- KPIs: Location addition rate, location accuracy.
+-- Feature Reference: CO03 (Locations)
+
+-- Table: company_departments
+-- Description: Departments within a company.
+-- Business Case: Organizes company structure into departments.
+-- KPIs: Department count, department employee distribution.
+-- Feature Reference: CO04 (Departments)
+
+-- Table: company_teams
+-- Description: Teams within a company/department.
+-- Business Case: Defines internal team structures.
+-- KPIs: Team creation rate, team membership growth.
+-- Feature Reference: CO05 (Teams)
+
+-- Table: company_products
+-- Description: Products offered by the company.
+-- Business Case: Showcases company products and offerings.
+-- KPIs: Product count, product view rate.
+-- Feature Reference: CO06 (Products)
+
+-- Table: company_services
+-- Description: Services offered by the company.
+-- Business Case: Lists services provided by the company.
+-- KPIs: Service count, service interest rate.
+-- Feature Reference: CO07 (Services)
+
+-- Table: company_competitors
+-- Description: Competitors of the company.
+-- Business Case: Tracks competitive landscape for analysis.
+-- KPIs: Competitor mapping accuracy, competitor count.
+-- Feature Reference: CO08 (Competitors)
+
+-- Table: company_investors
+-- Description: Investors (individuals or firms).
+-- Business Case: Tracks investment backing for companies.
+-- KPIs: Investor count, investment round tracking.
+-- Feature Reference: CO09 (Investors)
+
+-- Table: company_funding_rounds
+-- Description: Funding rounds raised by the company.
+-- Business Case: Documents financial funding history.
+-- KPIs: Funding round count, funding amount accuracy.
+-- Feature Reference: CO10 (Funding Rounds)
+
+-- Table: funding_round_investors
+-- Description: Mapping investors to funding rounds.
+-- Business Case: Links investors to specific funding events.
+-- KPIs: Mapping accuracy, investor participation rate.
+-- Feature Reference: CO11 (Round Investors)
+
+-- Table: company_acquisitions
+-- Description: Acquisitions made by the company.
+-- Business Case: Tracks M&A activity for company profiles.
+-- KPIs: Acquisition count, acquisition detail completeness.
+-- Feature Reference: CO12 (Acquisitions)
+
+-- Table: company_partnerships
+-- Description: Partnerships involving the company.
+-- Business Case: Documents strategic partnerships and alliances.
+-- KPIs: Partnership count, partnership visibility.
+-- Feature Reference: CO13 (Partnerships)
+
+-- Table: company_social_profiles
+-- Description: Social media profiles of the company.
+-- Business Case: Links external social media accounts.
+-- KPIs: Profile linking rate, social follower count.
+-- Feature Reference: CO14 (Social Profiles)
+
+-- Table: company_analytics
+-- Description: Aggregated analytics for company profiles.
+-- Business Case: Provides engagement and performance metrics for companies.
+-- KPIs: Profile view count, follower growth rate.
+-- Feature Reference: ANA08 (Company Analytics)
+
+-- Table: job_types
+-- Description: Types of employment for job listings.
+-- Business Case: Defines job type categories (full-time, contract).
+-- KPIs: Job type usage distribution.
+-- Feature Reference: JOB01 (Job Types)
+
+-- Table: job_categories
+-- Description: Categories for job listings.
+-- Business Case: Organizes jobs into categories for search and filtering.
+-- KPIs: Category coverage, category accuracy.
+-- Feature Reference: JOB02 (Job Categories)
+
+-- Table: job_listings
+-- Description: Job postings from companies.
+-- Business Case: Stores job opportunities posted by employers.
+-- KPIs: Job posting count, job view rate, application rate.
+-- Feature Reference: JOB03 (Job Listings)
+
+-- Table: job_skills
+-- Description: Skills required or preferred for a job listing.
+-- Business Case: Links required skills to job postings.
+-- KPIs: Skill requirement completeness, skill match rate.
+-- Feature Reference: JOB04 (Job Skills)
+
+-- Table: job_applications
+-- Description: Applications submitted by users for job listings.
+-- Business Case: Tracks job applications and their status.
+-- KPIs: Application submission count, application conversion rate.
+-- Feature Reference: JOB05 (Applications)
+
+-- Table: job_application_stages
+-- Description: Customizable stages for job application pipelines.
+-- Business Case: Defines custom hiring workflow stages.
+-- KPIs: Stage usage rate, stage transition time.
+-- Feature Reference: JOB06 (Application Stages)
+
+-- Table: job_application_notes
+-- Description: Internal notes on job applications.
+-- Business Case: Stores private notes for hiring teams.
+-- KPIs: Note creation rate, note retrieval rate.
+-- Feature Reference: JOB07 (Application Notes)
+
+-- Table: job_interviews
+-- Description: Scheduled interviews for job applications.
+-- Business Case: Manages interview scheduling and details.
+-- KPIs: Interview scheduling rate, interview completion rate.
+-- Feature Reference: JOB08 (Interviews)
+
+-- Table: job_offers
+-- Description: Job offers extended to applicants.
+-- Business Case: Tracks job offers and their status.
+-- KPIs: Offer acceptance rate, offer expiration rate.
+-- Feature Reference: JOB09 (Offers)
+
+-- Table: job_rejections
+-- Description: Rejection details for job applications.
+-- Business Case: Records rejection reasons and feedback.
+-- KPIs: Rejection feedback rate, rejection reason distribution.
+-- Feature Reference: JOB10 (Rejections)
+
+-- Table: job_saved_searches
+-- Description: User saved job search criteria.
+-- Business Case: Allows users to save and reuse search filters.
+-- KPIs: Search save rate, saved search usage rate.
+-- Feature Reference: JOB11 (Saved Searches)
+
+-- Table: job_alerts
+-- Description: Job alert subscriptions based on saved searches.
+-- Business Case: Sends automated job alerts to subscribers.
+-- KPIs: Alert subscription rate, alert open rate.
+-- Feature Reference: JOB12 (Job Alerts)
+
+-- Table: job_analytics
+-- Description: Analytics for individual job listings.
+-- Business Case: Provides performance metrics for job postings.
+-- KPIs: Job view count, application count, time-to-fill.
+-- Feature Reference: ANA09 (Job Analytics)
+
+-- Table: recruiter_profiles
+-- Description: Profiles for users acting as recruiters.
+-- Business Case: Stores professional details for recruiters.
+-- KPIs: Recruiter profile completeness, recruiter activity rate.
+-- Feature Reference: REC01 (Recruiter Profiles)
+
+-- Table: candidate_pools
+-- Description: Pools of potential candidates curated by recruiters.
+-- Business Case: Organizes candidate groups for recruitment.
+-- KPIs: Pool creation count, pool utilization rate.
+-- Feature Reference: REC02 (Candidate Pools)
+
+-- Table: candidate_pool_members
+-- Description: Users added to candidate pools.
+-- Business Case: Manages members within candidate pools.
+-- KPIs: Pool membership growth, member addition rate.
+-- Feature Reference: REC03 (Pool Members)
+
+-- Table: candidate_notes
+-- Description: Internal notes about potential candidates.
+-- Business Case: Stores private notes for candidate evaluation.
+-- KPIs: Note creation count, note retrieval rate.
+-- Feature Reference: REC04 (Candidate Notes)
+
+-- Table: candidate_tags
+-- Description: Tags used to categorize candidates.
+-- Business Case: Enables flexible candidate tagging and filtering.
+-- KPIs: Tag usage count, tag relevance score.
+-- Feature Reference: REC05 (Candidate Tags)
+
+-- Table: candidate_tag_map
+-- Description: Mapping tags to candidates.
+-- Business Case: Links candidates to relevant tags.
+-- KPIs: Tag mapping accuracy, tag association count.
+-- Feature Reference: REC06 (Tag Mapping)
+
+-- Table: job_market_analytics
+-- Description: Aggregated job market analytics.
+-- Business Case: Provides market-wide job and hiring trends.
+-- KPIs: Market trend accuracy, data freshness.
+-- Feature Reference: ANA10 (Market Analytics)
+
+-- Table: employees
+-- Description: Employee records for HR management.
+-- Business Case: Manages internal employee records and details.
+-- KPIs: Employee data accuracy, HR record completeness.
+-- Feature Reference: HR01 (Employee Records)
+
+-- Table: attendance
+-- Description: Employee attendance tracking.
+-- Business Case: Tracks employee check-in and attendance records.
+-- KPIs: Attendance record accuracy, absenteeism rate.
+-- Feature Reference: HR02 (Attendance)
+
+-- Table: company_reviews
+-- Description: User reviews of companies.
+-- Business Case: Stores employee and candidate reviews of companies.
+-- KPIs: Review submission rate, review moderation time.
+-- Feature Reference: REV01 (Company Reviews)
+
+-- Table: manager_reviews
+-- Description: User reviews of managers.
+-- Business Case: Stores feedback specifically for managers.
+-- KPIs: Manager review count, review sentiment score.
+-- Feature Reference: REV02 (Manager Reviews)
+
+-- Table: interview_experiences
+-- Description: User-reported interview experiences.
+-- Business Case: Stores candidate interviews experiences.
+-- KPIs: Experience submission rate, experience detail completeness.
+-- Feature Reference: REV03 (Interview Experiences)
+
+-- Table: salary_reports
+-- Description: User-reported salary information.
+-- Business Case: Stores salary data for market transparency.
+-- KPIs: Salary report submission rate, data accuracy.
+-- Feature Reference: REV04 (Salary Reports)
+
+-- Table: office_photos
+-- Description: Photos of company offices and workspaces.
+-- Business Case: Stores office photos for company profiles.
+-- KPIs: Photo upload count, photo view rate.
+-- Feature Reference: REV05 (Office Photos)
+
+-- Table: company_awards
+-- Description: Awards and recognitions received by companies.
+-- Business Case: Tracks awards and accolades for companies.
+-- KPIs: Award submission count, award verification rate.
+-- Feature Reference: REV06 (Company Awards)
+
+-- Table: company_executives
+-- Description: Executive leadership of companies.
+-- Business Case: Stores details of company leadership.
+-- KPIs: Executive profile completeness, leadership visibility.
+-- Feature Reference: REV07 (Executives)
+
+-- Table: executive_ratings
+-- Description: User ratings of company executives.
+-- Business Case: Stores feedback and ratings for executives.
+-- KPIs: Rating submission count, average rating score.
+-- Feature Reference: REV08 (Executive Ratings)
+
+-- Table: content_helpfulness
+-- Description: User feedback on the helpfulness of content.
+-- Business Case: Measures the value and usefulness of content.
+-- KPIs: Helpfulness vote count, content quality score.
+-- Feature Reference: REV09 (Content Helpfulness)
+
+-- Table: benefit_types
+-- Description: Types of employee benefits.
+-- Business Case: Defines the master list of employee benefits.
+-- KPIs: Benefit type coverage, benefit usage rate.
+-- Feature Reference: BEN01 (Benefit Types)
+
+-- Table: company_benefits
+-- Description: Benefits offered by companies.
+-- Business Case: Lists benefits provided by companies.
+-- KPIs: Benefit offering rate, benefit visibility.
+-- Feature Reference: BEN02 (Company Benefits)
+
+-- Table: company_statistics
+-- Description: Aggregated statistics about companies.
+-- Business Case: Provides aggregated metrics for company profiles.
+-- KPIs: Stat accuracy, metric freshness.
+-- Feature Reference: STAT01 (Company Stats)
+
+-- Table: manager_statistics
+-- Description: Aggregated statistics about managers.
+-- Business Case: Provides metrics for manager performance.
+-- KPIs: Stat accuracy, metric update frequency.
+-- Feature Reference: STAT02 (Manager Stats)
+
+-- Table: event_categories
+-- Description: Categories for events.
+-- Business Case: Organizes events into categories for discovery.
+-- KPIs: Category coverage, event categorization accuracy.
+-- Feature Reference: EVT01 (Event Categories)
+
+-- Table: events
+-- Description: Events organized on the platform.
+-- Business Case: Stores details of professional events and meetups.
+-- KPIs: Event creation count, event attendance rate.
+-- Feature Reference: EVT02 (Events)
+
+-- Table: event_attendees
+-- Description: Users attending events.
+-- Business Case: Manages attendee registration for events.
+-- KPIs: Registration count, attendance rate.
+-- Feature Reference: EVT03 (Attendees)
+
+-- Table: event_speakers
+-- Description: Speakers presenting at events.
+-- Business Case: Lists speakers and their details for events.
+-- KPIs: Speaker submission count, speaker profile completeness.
+-- Feature Reference: EVT04 (Speakers)
+
+-- Table: event_sponsors
+-- Description: Sponsors of events.
+-- Business Case: Manages sponsor details and sponsorship tiers.
+-- KPIs: Sponsor count, sponsorship revenue.
+-- Feature Reference: EVT05 (Sponsors)
+
+-- Table: event_sessions
+-- Description: Individual sessions within an event.
+-- Business Case: Manages schedule and details of event sessions.
+-- KPIs: Session creation count, session attendance rate.
+-- Feature Reference: EVT06 (Sessions)
+
+-- Table: event_session_speakers
+-- Description: Mapping speakers to event sessions.
+-- Business Case: Links speakers to specific sessions.
+-- KPIs: Mapping accuracy, speaker assignment rate.
+-- Feature Reference: EVT07 (Session Speakers)
+
+-- Table: event_locations
+-- Description: Specific locations/rooms within an in-person event venue.
+-- Business Case: Manages venue details and room assignments.
+-- KPIs: Location accuracy, room utilization.
+-- Feature Reference: EVT08 (Locations)
+
+-- Table: event_tickets
+-- Description: Ticket types available for an event.
+-- Business Case: Defines ticket tiers and pricing for events.
+-- KPIs: Ticket sales volume, ticket type distribution.
+-- Feature Reference: EVT09 (Tickets)
+
+-- Table: event_reviews
+-- Description: User reviews of events.
+-- Business Case: Stores attendee feedback and ratings for events.
+-- KPIs: Review submission rate, event rating score.
+-- Feature Reference: EVT10 (Event Reviews)
+
+-- Table: event_analytics
+-- Description: Aggregated analytics for events.
+-- Business Case: Provides performance metrics for events.
+-- KPIs: Event view count, attendance conversion rate.
+-- Feature Reference: ANA11 (Event Analytics)
+
+-- Table: course_categories
+-- Description: Categories for learning courses.
+-- Business Case: Organizes courses into categories for learning.
+-- KPIs: Category coverage, course categorization accuracy.
+-- Feature Reference: LRN01 (Course Categories)
+
+-- Table: courses
+-- Description: Online learning courses.
+-- Business Case: Stores details of educational courses.
+-- KPIs: Course creation count, course enrollment rate.
+-- Feature Reference: LRN02 (Courses)
+
+-- Table: course_modules
+-- Description: Modules within a course.
+-- Business Case: Organizes course content into modules.
+-- KPIs: Module creation rate, module completion rate.
+-- Feature Reference: LRN03 (Modules)
+
+-- Table: course_lessons
+-- Description: Individual lessons within a course module.
+-- Business Case: Stores individual lessons and learning materials.
+-- KPIs: Lesson creation count, lesson view rate.
+-- Feature Reference: LRN04 (Lessons)
+
+-- Table: course_enrollments
+-- Description: User enrollments in courses.
+-- Business Case: Manages user enrollment in learning courses.
+-- KPIs: Enrollment count, enrollment growth rate.
+-- Feature Reference: LRN05 (Enrollments)
+
+-- Table: course_progress
+-- Description: Tracking user progress through course lessons.
+-- Business Case: Tracks lesson completion and learning progress.
+-- KPIs: Progress completion rate, average progress score.
+-- Feature Reference: LRN06 (Progress Tracking)
+
+-- Table: course_completions
+-- Description: Records of course completions.
+-- Business Case: Stores records of completed courses.
+-- KPIs: Completion count, completion rate.
+-- Feature Reference: LRN07 (Completions)
+
+-- Table: course_reviews
+-- Description: User reviews of courses.
+-- Business Case: Stores feedback and ratings for courses.
+-- KPIs: Review submission rate, course rating average.
+-- Feature Reference: LRN08 (Course Reviews)
+
+-- Table: course_instructors
+-- Description: Mapping instructors to courses.
+-- Business Case: Links instructors to the courses they teach.
+-- KPIs: Instructor assignment count, instructor rating.
+-- Feature Reference: LRN09 (Instructors)
+
+-- Table: course_materials
+-- Description: Supplementary materials for course lessons.
+-- Business Case: Stores additional resources and materials.
+-- KPIs: Material upload count, material download rate.
+-- Feature Reference: LRN10 (Materials)
+
+-- Table: course_quizzes
+-- Description: Quizzes associated with course lessons.
+-- Business Case: Manages quizzes for knowledge assessment.
+-- KPIs: Quiz creation count, quiz participation rate.
+-- Feature Reference: LRN11 (Quizzes)
+
+-- Table: quiz_questions
+-- Description: Questions within a quiz.
+-- Business Case: Stores questions for course quizzes.
+-- KPIs: Question creation count, question accuracy.
+-- Feature Reference: LRN12 (Questions)
+
+-- Table: quiz_answers
+-- Description: Possible answers for quiz questions.
+-- Business Case: Defines answer options for quiz questions.
+-- KPIs: Answer mapping accuracy, answer correctness rate.
+-- Feature Reference: LRN13 (Answers)
+
+-- Table: quiz_attempts
+-- Description: User attempts at taking quizzes.
+-- Business Case: Tracks user attempts and performance on quizzes.
+-- KPIs: Attempt count, average score per attempt.
+-- Feature Reference: LRN14 (Attempts)
+
+-- Table: quiz_attempt_answers
+-- Description: Answers submitted during a quiz attempt.
+-- Business Case: Records individual answers for each attempt.
+-- KPIs: Answer submission accuracy, answer analysis.
+-- Feature Reference: LRN15 (Attempt Answers)
+
+-- Table: learning_paths
+-- Description: Curated learning paths combining multiple courses.
+-- Business Case: Groups courses into structured learning paths.
+-- KPIs: Path creation count, path completion rate.
+-- Feature Reference: LRN16 (Learning Paths)
+
+-- Table: learning_path_courses
+-- Description: Mapping courses to learning paths.
+-- Business Case: Links courses to specific learning paths.
+-- KPIs: Path mapping accuracy, course inclusion rate.
+-- Feature Reference: LRN17 (Path Courses)
+
+-- Table: learning_achievements
+-- Description: Achievements earned by users in the learning system.
+-- Business Case: Tracks learning milestones and achievements.
+-- KPIs: Achievement unlock rate, user engagement.
+-- Feature Reference: LRN18 (Achievements)
+
+-- Table: groups
+-- Description: User groups and communities.
+-- Business Case: Manages user-created groups and communities.
+-- KPIs: Group creation rate, group membership growth.
+-- Feature Reference: GRP01 (Groups)
+
+-- Table: group_members
+-- Description: Membership information for groups.
+-- Business Case: Manages member roles and status within groups.
+-- KPIs: Member addition rate, member retention rate.
+-- Feature Reference: GRP02 (Members)
+
+-- Table: group_roles
+-- Description: Custom roles within a group.
+-- Business Case: Defines custom roles for group management.
+-- KPIs: Role creation count, role assignment rate.
+-- Feature Reference: GRP03 (Group Roles)
+
+-- Table: group_content
+-- Description: Content posted within groups.
+-- Business Case: Stores posts and content shared in groups.
+-- KPIs: Content post rate, content engagement rate.
+-- Feature Reference: GRP04 (Group Content)
+
+-- Table: group_events
+-- Description: Events associated with groups.
+-- Business Case: Manages events organized by groups.
+-- KPIs: Event creation count, event attendance rate.
+-- Feature Reference: GRP05 (Group Events)
+
+-- Table: group_settings
+-- Description: Settings specific to a group.
+-- Business Case: Manages group-specific configurations.
+-- KPIs: Setting modification rate, configuration accuracy.
+-- Feature Reference: GRP06 (Settings)
+
+-- Table: group_analytics
+-- Description: Analytics for group activity.
+-- Business Case: Provides metrics for group performance and engagement.
+-- KPIs: Active group count, engagement score.
+-- Feature Reference: ANA12 (Group Analytics)
+
+-- Table: group_invitations
+-- Description: Invitations to join groups.
+-- Business Case: Manages invitation workflow for group membership.
+-- KPIs: Invitation send rate, acceptance rate.
+-- Feature Reference: GRP07 (Invitations)
+
+-- Table: group_join_requests
+-- Description: Requests from users to join private groups.
+-- Business Case: Manages requests for joining private groups.
+-- KPIs: Request count, approval rate.
+-- Feature Reference: GRP08 (Join Requests)
+
+-- Table: languages
+-- Description: Supported languages for localization.
+-- Business Case: Defines the list of supported languages.
+-- KPIs: Language coverage, translation accuracy.
+-- Feature Reference: LOC02 (Languages)
+
+-- Table: translation_keys
+-- Description: Keys for translatable content.
+-- Business Case: Defines keys for localization management.
+-- KPIs: Key coverage, translation key accuracy.
+-- Feature Reference: LOC03 (Translation Keys)
+
+-- Table: translations
+-- Description: Translated content for different languages.
+-- Business Case: Stores translated content for localization.
+-- KPIs: Translation completion rate, translation quality.
+-- Feature Reference: LOC04 (Translations)
+
+-- Table: company_translations
+-- Description: Translations of company profiles.
+-- Business Case: Stores translated company profile content.
+-- KPIs: Company translation accuracy, localization coverage.
+-- Feature Reference: LOC05 (Company Translations)
+
+-- Table: ui_translation_keys
+-- Description: UI text translation keys with context.
+-- Business Case: Defines UI-specific translation keys.
+-- KPIs: UI key coverage, translation accuracy.
+-- Feature Reference: LOC06 (UI Translation Keys)
+
+-- Table: ui_translations
+-- Description: Translated UI text with versioning.
+-- Business Case: Stores translated UI text for the application.
+-- KPIs: UI translation completeness, version accuracy.
+-- Feature Reference: LOC07 (UI Translations)
+
+-- Table: data_subjects
+-- Description: GDPR data subject information.
+-- Business Case: Manages data subject details for GDPR compliance.
+-- KPIs: Data subject record count, compliance accuracy.
+-- Feature Reference: GDPR01 (Data Subjects)
+
+-- Table: data_processing_purposes
+-- Description: Purposes for data processing under GDPR.
+-- Business Case: Defines lawful purposes for data processing.
+-- KPIs: Purpose definition coverage, compliance audit rate.
+-- Feature Reference: GDPR02 (Processing Purposes)
+
+-- Table: data_categories
+-- Description: Categories of personal data under GDPR classification.
+-- Business Case: Classifies personal data for compliance.
+-- KPIs: Category accuracy, classification coverage.
+-- Feature Reference: GDPR03 (Data Categories)
+
+-- Table: data_processing_activities
+-- Description: Register of data processing activities.
+-- Business Case: Maintains the record of processing activities (ROPA).
+-- KPIs: Activity record accuracy, audit compliance rate.
+-- Feature Reference: GDPR04 (Processing Activities)
+
+-- Table: data_processing_categories
+-- Description: Mapping processing activities to data categories.
+-- Business Case: Links processing activities to data categories.
+-- KPIs: Mapping accuracy, compliance mapping coverage.
+-- Feature Reference: GDPR05 (Activity Mapping)
+
+-- Table: consent_records
+-- Description: GDPR Article 7 consent management.
+-- Business Case: Tracks user consent for data processing.
+-- KPIs: Consent record count, consent withdrawal rate.
+-- Feature Reference: GDPR06 (Consent Records)
+
+-- Table: data_subject_requests
+-- Description: GDPR data subject rights requests.
+-- Business Case: Manages data subject access and deletion requests.
+-- KPIs: Request resolution time, compliance rate.
+-- Feature Reference: GDPR07 (Subject Requests)
+
+-- Table: data_breaches
+-- Description: Personal data breach incidents.
+-- Business Case: Records and manages data breach incidents.
+-- KPIs: Breach detection time, notification compliance rate.
+-- Feature Reference: GDPR08 (Data Breaches)
+
+-- Table: data_breaches_categories
+-- Description: Linking data breaches to categories.
+-- Business Case: Links breaches to affected data categories.
+-- KPIs: Linking accuracy, impact assessment accuracy.
+-- Feature Reference: GDPR09 (Breach Categories)
+
+-- Table: data_retention_policies
+-- Description: Data retention policies with audit trail.
+-- Business Case: Defines data retention and deletion policies.
+-- KPIs: Policy coverage, deletion execution rate.
+-- Feature Reference: GDPR10 (Retention Policies)
+
+-- Table: data_archives
+-- Description: Records of archived data.
+-- Business Case: Tracks data archived for compliance and recovery.
+-- KPIs: Archive accuracy, retrieval success rate.
+-- Feature Reference: ARCH01 (Data Archives)
+
+-- Table: data_quality_metrics
+-- Description: Metrics for data quality monitoring.
+-- Business Case: Monitors data accuracy and completeness.
+-- KPIs: Data quality score, metric accuracy.
+-- Feature Reference: QUAL01 (Quality Metrics)
+
+-- Table: data_quality_issues
+-- Description: Identified data quality issues.
+-- Business Case: Tracks and resolves data quality problems.
+-- KPIs: Issue detection time, resolution rate.
+-- Feature Reference: QUAL02 (Quality Issues)
+
+-- Table: data_profiles
+-- Description: Profiles of database tables for monitoring.
+-- Business Case: Monitors table structure and health.
+-- KPIs: Profile accuracy, health monitoring coverage.
+-- Feature Reference: PROF12 (Data Profiles)
+
+-- Table: data_classification
+-- Description: Inventory and classification of all sensitive data elements.
+-- Business Case: Classifies sensitive data for security and compliance.
+-- KPIs: Classification coverage, sensitivity accuracy.
+-- Feature Reference: CLASS01 (Data Classification)
+
+-- Table: legal_hold_requests
+-- Description: Legal hold management for litigation.
+-- Business Case: Manages legal holds on data for litigation.
+-- KPIs: Hold execution time, hold accuracy.
+-- Feature Reference: LEG01 (Legal Holds)
+
+-- Table: regional_compliance_rules
+-- Description: Regional compliance rules (e.g., GDPR/CCPA).
+-- Business Case: Manages compliance rules by region.
+-- KPIs: Rule coverage, compliance accuracy.
+-- Feature Reference: COMP01 (Regional Rules)
+
+-- Table: consent_audit_trail
+-- Description: Immutable GDPR/CCPA consent audit trail.
+-- Business Case: Provides immutable audit trail for consent changes.
+-- KPIs: Audit log completeness, retrieval speed.
+-- Feature Reference: AUD01 (Consent Audit)
+
+-- Table: data_dictionary_entries
+-- Description: Standardized metadata registry for master data.
+-- Business Case: Manages metadata for data governance.
+-- KPIs: Metadata completeness, dictionary accuracy.
+-- Feature Reference: DICT01 (Data Dictionary)
+
+-- Table: data_quality_checks
+-- Description: Rule engine for automated data validation.
+-- Business Case: Automates data validation and quality checks.
+-- KPIs: Check execution rate, validation accuracy.
+-- Feature Reference: QUAL03 (Quality Checks)
+
+-- Table: data_lineage
+-- Description: End-to-end data flow tracking for audit.
+-- Business Case: Tracks data flow for compliance and audit.
+-- KPIs: Lineage accuracy, traceability coverage.
+-- Feature Reference: LINE01 (Data Lineage)
+
+-- Table: data_lineage_edges
+-- Description: Provenance tracking for regulatory compliance.
+-- Business Case: Maps data transformations and origins.
+-- KPIs: Edge mapping accuracy, provenance accuracy.
+-- Feature Reference: LINE02 (Lineage Edges)
+
+-- Table: data_retention_queue
+-- Description: Execution queue for automated data retention.
+-- Business Case: Manages execution of data retention policies.
+-- KPIs: Queue processing rate, execution accuracy.
+-- Feature Reference: RETQ01 (Retention Queue)
+
+-- Table: industry_trends
+-- Description: Trends identified within specific industries.
+-- Business Case: Tracks and analyzes industry-specific trends.
+-- KPIs: Trend accuracy, trend detection time.
+-- Feature Reference: TREND01 (Industry Trends)
+
+-- Table: network_analytics
+-- Description: Overall platform network growth and density analytics.
+-- Business Case: Analyzes network growth and connectivity.
+-- KPIs: Network growth rate, density accuracy.
+-- Feature Reference: ANA13 (Network Analytics)
+
+-- Table: search_analytics
+-- Description: Comprehensive logging of search queries with click-through data.
+-- Business Case: Tracks search behavior for optimization.
+-- KPIs: Search query volume, click-through rate.
+-- Feature Reference: ANA14 (Search Analytics)
+
+-- Table: feature_usage_analytics
+-- Description: Tracking usage of specific platform features.
+-- Business Case: Monitors feature adoption and usage.
+-- KPIs: Feature usage count, adoption rate.
+-- Feature Reference: ANA15 (Feature Usage)
+
+-- Table: revenue_analytics
+-- Description: Platform revenue analytics.
+-- Business Case: Tracks revenue streams and financial performance.
+-- KPIs: Revenue growth, revenue accuracy.
+-- Feature Reference: ANA16 (Revenue Analytics)
+
+-- Table: retention_metrics
+-- Description: User retention metrics by cohort.
+-- Business Case: Measures user retention and churn.
+-- KPIs: Retention rate, churn rate.
+-- Feature Reference: ANA17 (Retention Metrics)
+
+-- Table: growth_metrics
+-- Description: Key platform growth metrics.
+-- Business Case: Tracks overall platform growth.
+-- KPIs: User growth rate, engagement growth.
+-- Feature Reference: ANA18 (Growth Metrics)
+
+-- Table: search_query_logs
+-- Description: Raw event stream for product analytics.
+-- Business Case: Logs search events for analysis.
+-- KPIs: Event volume, event accuracy.
+-- Feature Reference: LOG01 (Search Logs)
+
+-- Table: user_behavior_events
+-- Description: User behavior event tracking.
+-- Business Case: Tracks user behavior for analytics.
+-- KPIs: Event tracking accuracy, behavior insight rate.
+-- Feature Reference: LOG02 (Behavior Events)
+
+-- Table: moderation_queue
+-- Description: Content items awaiting or undergoing moderation.
+-- Business Case: Manages content moderation workflow.
+-- KPIs: Moderation queue size, processing time.
+-- Feature Reference: MOD02 (Moderation Queue)
+
+-- Table: moderation_actions
+-- Description: Audit log of all moderator actions on queued items.
+-- Business Case: Tracks actions taken by moderators.
+-- KPIs: Action count, action accuracy.
+-- Feature Reference: MOD03 (Moderation Actions)
+
+-- Table: content_moderation_queues
+-- Description: Centralized content moderation workflow.
+-- Business Case: Centralizes moderation queues for efficiency.
+-- KPIs: Queue processing efficiency, moderation coverage.
+-- Feature Reference: MOD04 (Centralized Moderation)
+
+-- Table: moderation_appeals
+-- Description: User appeals against moderation decisions.
+-- Business Case: Manages user appeals for moderation.
+-- KPIs: Appeal submission count, appeal resolution time.
+-- Feature Reference: MOD05 (Appeals)
+
+-- Table: abuse_reports_aggregate
+-- Description: Pre-aggregated counts of abuse reports.
+-- Business Case: Aggregates abuse reports for analysis.
+-- KPIs: Report count accuracy, aggregation accuracy.
+-- Feature Reference: ABUSE01 (Report Aggregates)
+
+-- Table: notification_templates
+-- Description: Centralized, localized notification templates.
+-- Business Case: Manages notification templates for delivery.
+-- KPIs: Template usage rate, template accuracy.
+-- Feature Reference: NOTIF02 (Templates)
+
+-- Table: notification_delivery_logs
+-- Description: Comprehensive audit trail of notification delivery.
+-- Business Case: Tracks notification delivery for reliability.
+-- KPIs: Delivery success rate, delivery latency.
+-- Feature Reference: NOTIF03 (Delivery Logs)
+
+-- Table: notification_preferences
+-- Description: Granular user notification preferences.
+-- Business Case: Manages user notification settings.
+-- KPIs: Preference save rate, preference accuracy.
+-- Feature Reference: NOTIF04 (Preferences)
+
+-- Table: experiments
+-- Description: A/B testing experiment configurations.
+-- Business Case: Manages A/B testing experiments.
+-- KPIs: Experiment creation count, experiment accuracy.
+-- Feature Reference: EXP01 (Experiments)
+
+-- Table: experiment_assignments
+-- Description: User assignments to experiment variants.
+-- Business Case: Manages user assignment to experiments.
+-- KPIs: Assignment accuracy, assignment rate.
+-- Feature Reference: EXP02 (Assignments)
+
+-- Table: experiment_metrics
+-- Description: Goal events and metrics for analysis.
+-- Business Case: Tracks metrics for experiment analysis.
+-- KPIs: Metric accuracy, metric collection rate.
+-- Feature Reference: EXP03 (Experiment Metrics)
+
+-- Table: experiment_definitions
+-- Description: Declarative A/B testing configuration.
+-- Business Case: Defines experiment parameters and rules.
+-- KPIs: Definition accuracy, configuration coverage.
+-- Feature Reference: EXP04 (Definitions)
+
+-- Table: experiment_metric_facts
+-- Description: Business metric values for analysis.
+-- Business Case: Stores metric facts for experiment analysis.
+-- KPIs: Fact accuracy, data collection accuracy.
+-- Feature Reference: EXP05 (Metric Facts)
+
+-- Table: feature_flag_evaluations
+-- Description: Logs feature flag evaluations for analytics.
+-- Business Case: Tracks feature flag evaluations.
+-- KPIs: Evaluation count, evaluation accuracy.
+-- Feature Reference: EXP06 (Flag Evaluations)
+
+-- Table: feature_flag_evaluation_logs
+-- Description: Sampled evaluation logs.
+-- Business Case: Logs sampled flag evaluations for analysis.
+-- KPIs: Log accuracy, log sampling rate.
+-- Feature Reference: EXP07 (Flag Logs)
+
+-- Table: subscription_plans
+-- Description: Multi-tier subscription product catalog.
+-- Business Case: Manages subscription plans and pricing.
+-- KPIs: Plan creation count, plan accuracy.
+-- Feature Reference: BILL02 (Plans)
+
+-- Table: subscriptions
+-- Description: User subscription lifecycle management.
+-- Business Case: Manages user subscriptions and status.
+-- KPIs: Subscription count, renewal rate.
+-- Feature Reference: BILL03 (Subscriptions)
+
+-- Table: invoices
+-- Description: Comprehensive billing documents with line items.
+-- Business Case: Generates and manages invoices for billing.
+-- KPIs: Invoice creation count, invoice accuracy.
+-- Feature Reference: BILL04 (Invoices)
+
+-- Table: invoice_line_items
+-- Description: Detailed line items for invoices.
+-- Business Case: Manages line items within invoices.
+-- KPIs: Line item accuracy, item count accuracy.
+-- Feature Reference: BILL05 (Line Items)
+
+-- Table: payments
+-- Description: Payment transaction tracking with reconciliation.
+-- Business Case: Tracks payments and reconciliation.
+-- KPIs: Payment success rate, reconciliation accuracy.
+-- Feature Reference: BILL06 (Payments)
+
+-- Table: payment_methods
+-- Description: Tokenized payment methods with PCI compliance.
+-- Business Case: Manages tokenized payment methods securely.
+-- KPIs: Method creation count, security compliance.
+-- Feature Reference: BILL07 (Payment Methods)
+
+-- Table: tax_rates
+-- Description: Tax rates by jurisdiction, product, and customer type.
+-- Business Case: Manages tax rates for billing.
+-- KPIs: Tax rate accuracy, tax calculation accuracy.
+-- Feature Reference: BILL08 (Tax Rates)
+
+-- Table: tax_jurisdictions
+-- Description: Geo/time-bound tax rule storage.
+-- Business Case: Manages tax jurisdiction rules.
+-- KPIs: Jurisdiction coverage, rule accuracy.
+-- Feature Reference: BILL09 (Jurisdictions)
+
+-- Table: tax_calculations
+-- Description: Pre-computed tax breakdowns for invoices.
+-- Business Case: Calculates and stores tax breakdowns.
+-- KPIs: Calculation accuracy, calculation speed.
+-- Feature Reference: BILL10 (Calculations)
+
+-- Table: usage_meters
+-- Description: Tracks consumption of metered resources.
+-- Business Case: Tracks usage for metered billing.
+-- KPIs: Usage count accuracy, metering accuracy.
+-- Feature Reference: BILL11 (Usage Meters)
+
+-- Table: usage_events
+-- Description: Raw usage events for metering.
+-- Business Case: Logs raw usage events for metering.
+-- KPIs: Event count, event accuracy.
+-- Feature Reference: BILL12 (Usage Events)
+
+-- Table: credits_wallet
+-- Description: User credit/points wallet with balance tracking.
+-- Business Case: Manages user credit wallets and balances.
+-- KPIs: Wallet creation count, balance accuracy.
+-- Feature Reference: BILL13 (Credits Wallet)
+
+-- Table: credit_transactions
+-- Description: Audit trail of all credit wallet transactions.
+-- Business Case: Tracks credit transactions for audit.
+-- KPIs: Transaction count, transaction accuracy.
+-- Feature Reference: BILL14 (Credit Transactions)
+
+-- Table: coupons
+-- Description: Discount coupons and promotional codes.
+-- Business Case: Manages coupons and promotional codes.
+-- KPIs: Coupon creation count, redemption rate.
+-- Feature Reference: BILL15 (Coupons)
+
+-- Table: coupon_redemptions
+-- Description: Tracks each coupon usage by customers.
+-- Business Case: Tracks coupon redemptions for billing.
+-- KPIs: Redemption count, redemption accuracy.
+-- Feature Reference: BILL16 (Redemptions)
+
+-- Table: affiliate_partners
+-- Description: Manages affiliate marketing partners.
+-- Business Case: Manages affiliate partners and commissions.
+-- KPIs: Partner count, affiliate accuracy.
+-- Feature Reference: AFF01 (Partners)
+
+-- Table: affiliate_opportunities
+-- Description: B2B referral tracking with commission attribution.
+-- Business Case: Tracks affiliate opportunities and commissions.
+-- KPIs: Opportunity count, commission accuracy.
+-- Feature Reference: AFF02 (Opportunities)
+
+-- Table: affiliate_conversions
+-- Description: Tracked conversions from affiliate referrals.
+-- Business Case: Tracks conversions for affiliate programs.
+-- KPIs: Conversion count, conversion accuracy.
+-- Feature Reference: AFF03 (Conversions)
+
+-- Table: creator_subscriptions
+-- Description: Tiered access to premium creator content.
+-- Business Case: Manages subscriptions for creator content.
+-- KPIs: Subscription count, subscription renewal rate.
+-- Feature Reference: CRE01 (Creator Subscriptions)
+
+-- Table: content_tips
+-- Description: Micro-payments for high-value content with tipping.
+-- Business Case: Manages micro-payments and tips for content.
+-- KPIs: Tip count, tip accuracy.
+-- Feature Reference: CRE02 (Content Tips)
+
+-- Table: api_rate_limits
+-- Description: Configurable rate limiting rules.
+-- Business Case: Manages API rate limiting rules.
+-- KPIs: Rule count, rule accuracy.
+-- Feature Reference: API04 (Rate Limits)
+
+-- Table: api_rate_limit_counters
+-- Description: Distributed sliding window counters.
+-- Business Case: Manages API rate limit counters.
+-- KPIs: Counter accuracy, counter efficiency.
+-- Feature Reference: API05 (Counters)
+
+-- Table: api_gateway_routes
+-- Description: Routing and rate limiting rules for API.
+-- Business Case: Manages API routing and rules.
+-- KPIs: Route count, routing accuracy.
+-- Feature Reference: API06 (Routes)
+
+-- Table: api_usage_logs
+-- Description: Comprehensive logging of API requests.
+-- Business Case: Logs API usage for analysis.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: API07 (Usage Logs)
+
+-- Table: webhook_subscriptions
+-- Description: Configuration for outgoing webhook subscriptions.
+-- Business Case: Manages webhook subscriptions.
+-- KPIs: Subscription count, subscription accuracy.
+-- Feature Reference: WH01 (Subscriptions)
+
+-- Table: webhook_delivery_logs
+-- Description: Detailed log of every webhook delivery.
+-- Business Case: Tracks webhook delivery details.
+-- KPIs: Delivery count, delivery accuracy.
+-- Feature Reference: WH02 (Delivery Logs)
+
+-- Table: webhook_retry_queues
+-- Description: Resilient failure handling for background jobs.
+-- Business Case: Manages webhook retries and failures.
+-- KPIs: Retry count, retry success rate.
+-- Feature Reference: WH03 (Retry Queues)
+
+-- Table: integration_mappings
+-- Description: Field mapping for system integrations.
+-- Business Case: Manages field mappings for integrations.
+-- KPIs: Mapping count, mapping accuracy.
+-- Feature Reference: INT01 (Mappings)
+
+-- Table: integration_health_checks
+-- Description: Real-time health monitoring of third-party integrations.
+-- Business Case: Monitors integration health.
+-- KPIs: Health check count, health accuracy.
+-- Feature Reference: INT02 (Health Checks)
+
+-- Table: search_sync_queue
+-- Description: Queue for synchronizing data changes with search engine.
+-- Business Case: Manages search synchronization queue.
+-- KPIs: Sync count, sync accuracy.
+-- Feature Reference: SYNC01 (Sync Queue)
+
+-- Table: workflow_definitions
+-- Description: Declarative workflow engine configuration.
+-- Business Case: Manages workflow definitions.
+-- KPIs: Definition count, definition accuracy.
+-- Feature Reference: WF01 (Definitions)
+
+-- Table: workflow_instances
+-- Description: Runtime state and execution history.
+-- Business Case: Manages workflow instances.
+-- KPIs: Instance count, instance accuracy.
+-- Feature Reference: WF02 (Instances)
+
+-- Table: workflow_execution_instances
+-- Description: Runtime execution of workflow definitions.
+-- Business Case: Manages workflow execution.
+-- KPIs: Execution count, execution accuracy.
+-- Feature Reference: WF03 (Execution Instances)
+
+-- Table: workflow_steps
+-- Description: Individual step execution within workflows.
+-- Business Case: Manages workflow steps.
+-- KPIs: Step count, step accuracy.
+-- Feature Reference: WF04 (Steps)
+
+-- Table: task_assignments
+-- Description: SLA-bound task routing and escalation tracking.
+-- Business Case: Manages task assignments and routing.
+-- KPIs: Task count, assignment accuracy.
+-- Feature Reference: WF05 (Assignments)
+
+-- Table: support_tickets
+-- Description: Central customer support ticket management.
+-- Business Case: Manages support tickets.
+-- KPIs: Ticket count, ticket resolution time.
+-- Feature Reference: SUP01 (Tickets)
+
+-- Table: ticket_comments
+-- Description: Conversation history for support tickets.
+-- Business Case: Manages comments on tickets.
+-- KPIs: Comment count, comment accuracy.
+-- Feature Reference: SUP02 (Comments)
+
+-- Table: schema_migrations
+-- Description: Tracks version history of database schema changes.
+-- Business Case: Manages schema migrations.
+-- KPIs: Migration count, migration accuracy.
+-- Feature Reference: MIG01 (Migrations)
+
+-- Table: rate_limits
+-- Description: Configurable rate limiting rules.
+-- Business Case: Manages rate limiting rules.
+-- KPIs: Rule count, rule accuracy.
+-- Feature Reference: RL01 (Rate Limits)
+
+-- Table: feature_flags
+-- Description: Enhanced feature flag system.
+-- Business Case: Manages feature flags.
+-- KPIs: Flag count, flag accuracy.
+-- Feature Reference: FF01 (Feature Flags)
+
+-- Table: maintenance_logs
+-- Description: Logs of system maintenance activities.
+-- Business Case: Logs system maintenance activities.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: MAINT01 (Maintenance Logs)
+
+-- Table: error_logs
+-- Description: System error logs.
+-- Business Case: Logs system errors.
+-- KPIs: Error count, error accuracy.
+-- Feature Reference: ERR01 (Error Logs)
+
+-- Table: performance_metrics
+-- Description: System performance metrics.
+-- Business Case: Tracks system performance metrics.
+-- KPIs: Metric count, metric accuracy.
+-- Feature Reference: PERF01 (Performance Metrics)
+
+-- Table: security_logs
+-- Description: Security-related event logs.
+-- Business Case: Logs security events.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: SEC03 (Security Logs)
+
+-- Table: audit_trails
+-- Description: Detailed audit trail for critical data changes.
+-- Business Case: Provides detailed audit trails.
+-- KPIs: Audit count, audit accuracy.
+-- Feature Reference: AUD02 (Audit Trails)
+
+-- Table: audit_log
+-- Description: Complete audit trail with before/after snapshots.
+-- Business Case: Provides complete audit trail with snapshots.
+-- KPIs: Audit completeness, retrieval speed.
+-- Feature Reference: AUD03 (Audit Log)
+
+-- Table: audit_log_archive
+-- Description: Long-term immutable archive for audit logs.
+-- Business Case: Archives audit logs long-term.
+-- KPIs: Archive accuracy, archive retrieval speed.
+-- Feature Reference: ARCH02 (Audit Archive)
+
+-- Table: access_review_sessions
+-- Description: Periodic access certification campaigns.
+-- Business Case: Manages access review campaigns.
+-- KPIs: Review count, review accuracy.
+-- Feature Reference: REV09 (Review Sessions)
+
+-- Table: scim_sync_logs
+-- Description: Audit trail for IdP directory synchronization.
+-- Business Case: Logs directory synchronization.
+-- KPIs: Sync count, sync accuracy.
+-- Feature Reference: SYNC02 (SCIM Sync Logs)
+
+-- Table: service_dependencies
+-- Description: Maps dependencies between microservices.
+-- Business Case: Maps service dependencies.
+-- KPIs: Dependency count, dependency accuracy.
+-- Feature Reference: DEP01 (Service Dependencies)
+
+-- Table: service_health_status
+-- Description: Internal service endpoint monitoring.
+-- Business Case: Monitors service health.
+-- KPIs: Health count, health accuracy.
+-- Feature Reference: HLTH01 (Health Status)
+
+-- Table: health_check_results
+-- Description: Synthetic and endpoint monitoring logs.
+-- Business Case: Logs health check results.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: HLTH02 (Health Check Results)
+
+-- Table: system_health_metrics
+-- Description: Time-series system health and performance metrics.
+-- Business Case: Tracks system health metrics.
+-- KPIs: Metric count, metric accuracy.
+-- Feature Reference: HLTH03 (Health Metrics)
+
+-- Table: system_health_summary
+-- Description: Daily aggregated system health metrics.
+-- Business Case: Aggregates system health metrics.
+-- KPIs: Summary accuracy, aggregation accuracy.
+-- Feature Reference: HLTH04 (Health Summary)
+
+-- Table: alert_policies
+-- Description: Threshold-based alerting rules.
+-- Business Case: Manages alert policies.
+-- KPIs: Policy count, policy accuracy.
+-- Feature Reference: ALERT01 (Alert Policies)
+
+-- Table: escalation_policies
+-- Description: Tiered escalation rules for incident response.
+-- Business Case: Manages escalation rules.
+-- KPIs: Policy count, policy accuracy.
+-- Feature Reference: ALERT02 (Escalation Policies)
+
+-- Table: on_call_schedules
+-- Description: Rotation rosters for incident response.
+-- Business Case: Manages on-call schedules.
+-- KPIs: Schedule count, schedule accuracy.
+-- Feature Reference: ALERT03 (On-Call Schedules)
+
+-- Table: dead_letter_queue
+-- Description: Stores failed background job messages.
+-- Business Case: Manages failed jobs.
+-- KPIs: Queue count, processing accuracy.
+-- Feature Reference: JOBQ01 (Dead Letter Queue)
+
+-- Table: cache_invalidation_log
+-- Description: Complete audit trail of cache invalidation.
+-- Business Case: Logs cache invalidation.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: CACHE01 (Invalidation Log)
+
+-- Table: cache_warming_jobs
+-- Description: Pre-warming cache to improve performance.
+-- Business Case: Manages cache warming jobs.
+-- KPIs: Job count, job accuracy.
+-- Feature Reference: CACHE02 (Warming Jobs)
+
+-- Table: query_performance_logs
+-- Description: Database query performance monitoring.
+-- Business Case: Logs query performance.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: QUERY01 (Performance Logs)
+
+-- Table: tenant_configurations
+-- Description: SaaS multi-tenant isolation and branding settings.
+-- Business Case: Manages tenant configurations.
+-- KPIs: Config count, config accuracy.
+-- Feature Reference: TEN01 (Tenant Config)
+
+-- Table: backup_metadata
+-- Description: Tracks database backups for DR compliance.
+-- Business Case: Manages backup metadata.
+-- KPIs: Backup count, backup accuracy.
+-- Feature Reference: BACKUP01 (Backup Metadata)
+
+-- Table: restore_logs
+-- Description: Records restore operations for audit.
+-- Business Case: Logs restore operations.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: BACKUP02 (Restore Logs)
+
+-- Table: backup_restore_jobs
+-- Description: PITR tracking and disaster recovery jobs.
+-- Business Case: Manages recovery jobs.
+-- KPIs: Job count, job accuracy.
+-- Feature Reference: BACKUP03 (Recovery Jobs)
+
+-- Table: documents
+-- Description: Centralized document repository with metadata.
+-- Business Case: Manages documents.
+-- KPIs: Document count, document accuracy.
+-- Feature Reference: DOC01 (Documents)
+
+-- Table: document_versions
+-- Description: Immutable historical versions of documents.
+-- Business Case: Manages document versions.
+-- KPIs: Version count, version accuracy.
+-- Feature Reference: DOC02 (Versions)
+
+-- Table: digital_signatures
+-- Description: Cryptographic signatures with certificate chains.
+-- Business Case: Manages digital signatures.
+-- KPIs: Signature count, signature accuracy.
+-- Feature Reference: DOC03 (Signatures)
+
+-- Table: contracts
+-- Description: Master contract registry with lifecycle tracking.
+-- Business Case: Manages contracts.
+-- KPIs: Contract count, contract accuracy.
+-- Feature Reference: CONT26 (Contracts)
+
+-- Table: contract_clauses
+-- Description: Legal clause extraction and obligation tracking.
+-- Business Case: Manages contract clauses.
+-- KPIs: Clause count, clause accuracy.
+-- Feature Reference: CONT27 (Clauses)
+
+-- Table: journal_entries
+-- Description: Double-entry audit trail header for accounting.
+-- Business Case: Manages journal entries.
+-- KPIs: Entry count, entry accuracy.
+-- Feature Reference: FIN01 (Journal Entries)
+
+-- Table: career_path_simulations
+-- Description: Probabilistic career path predictions.
+-- Business Case: Predicts career paths.
+-- KPIs: Prediction count, prediction accuracy.
+-- Feature Reference: CAREER01 (Simulations)
+
+-- Table: skill_gap_analysis
+-- Description: Actionable skill gap analysis with roadmaps.
+-- Business Case: Analyzes skill gaps.
+-- KPIs: Analysis count, analysis accuracy.
+-- Feature Reference: CAREER02 (Skill Gaps)
+
+-- Table: ai_career_recommendations
+-- Description: Transparent ML career recommendations.
+-- Business Case: Recommends career paths.
+-- KPIs: Recommendation count, recommendation accuracy.
+-- Feature Reference: CAREER03 (Recommendations)
+
+-- Table: recommendation_feedback_log
+-- Description: Feedback on recommendations for ML training.
+-- Business Case: Logs recommendation feedback.
+-- KPIs: Feedback count, feedback accuracy.
+-- Feature Reference: CAREER04 (Feedback Log)
+
+-- Table: recommendation_models
+-- Description: Stores ML model configurations and versions.
+-- Business Case: Manages recommendation models.
+-- KPIs: Model count, model accuracy.
+-- Feature Reference: CAREER05 (Models)
+
+-- Table: user_recommendations
+-- Description: ML-based recommendations for users.
+-- Business Case: Provides user recommendations.
+-- KPIs: Recommendation count, recommendation accuracy.
+-- Feature Reference: CAREER06 (User Recs)
+
+-- Table: recommendation_training_datasets
+-- Description: Snapshots of data for ML retraining.
+-- Business Case: Manages training datasets.
+-- KPIs: Dataset count, dataset accuracy.
+-- Feature Reference: CAREER07 (Training Data)
+
+-- Table: credential_verifications
+-- Description: Cryptographically verifiable credential storage.
+-- Business Case: Manages credential verification.
+-- KPIs: Verification count, verification accuracy.
+-- Feature Reference: CRED01 (Verifications)
+
+-- Table: blockchain_credential_ledger
+-- Description: Blockchain-anchored credential proofs.
+-- Business Case: Manages blockchain proofs.
+-- KPIs: Proof count, proof accuracy.
+-- Feature Reference: CRED02 (Blockchain Ledger)
+
+-- Table: trust_reputation_scores
+-- Description: Dynamic, behavior-validated reputation system.
+-- Business Case: Manages reputation scores.
+-- KPIs: Score count, score accuracy.
+-- Feature Reference: TRUST02 (Reputation Scores)
+
+-- Table: endorsements
+-- Description: Peer endorsements with weight based on trust.
+-- Business Case: Manages endorsements.
+-- KPIs: Endorsement count, endorsement accuracy.
+-- Feature Reference: TRUST03 (Endorsements)
+
+-- Table: user_behavior_metrics
+-- Description: Aggregated metrics for trust scoring.
+-- Business Case: Aggregates behavior metrics.
+-- KPIs: Metric count, metric accuracy.
+-- Feature Reference: TRUST04 (Behavior Metrics)
+
+-- Table: user_longevity_metrics
+-- Description: User tenure and activity metrics.
+-- Business Case: Tracks user longevity.
+-- KPIs: Metric count, metric accuracy.
+-- Feature Reference: TRUST05 (Longevity Metrics)
+
+-- Table: collaboration_projects
+-- Description: Open professional projects for co-creation.
+-- Business Case: Manages collaboration projects.
+-- KPIs: Project count, project accuracy.
+-- Feature Reference: COLLAB01 (Projects)
+
+-- Table: project_contributions
+-- Description: Granular, verifiable work contributions.
+-- Business Case: Tracks contributions.
+-- KPIs: Contribution count, contribution accuracy.
+-- Feature Reference: COLLAB02 (Contributions)
+
+-- Table: mentorship_matches
+-- Description: AI-matched structured mentorship relationships.
+-- Business Case: Manages mentorship matches.
+-- KPIs: Match count, match accuracy.
+-- Feature Reference: MENTOR01 (Matches)
+
+-- Table: mentorship_sessions
+-- Description: Individual mentorship meeting logs.
+-- Business Case: Tracks mentorship sessions.
+-- KPIs: Session count, session accuracy.
+-- Feature Reference: MENTOR02 (Sessions)
+
+-- Table: job_queue_workers
+-- Description: Tracks background job workers.
+-- Business Case: Manages job queue workers.
+-- KPIs: Worker count, worker accuracy.
+-- Feature Reference: QUEUE01 (Workers)
+
+-- Table: pipeline_execution_logs
+-- Description: Logs for ETL/ELT pipeline executions.
+-- Business Case: Logs pipeline executions.
+-- KPIs: Log count, log accuracy.
+-- Feature Reference: PIPE01 (Execution Logs)
+
+-- Table: sla_breach_logs
+-- Description: Tracks SLA breaches for compliance and reporting.
+-- Business Case: Tracks SLA breaches.
+-- KPIs: Breach count, breach accuracy.
+-- Feature Reference: SLA01 (Breach Logs)
+
+-- Table: referral_codes
+-- Description: Tracks referral codes for user acquisition.
+-- Business Case: Manages referral codes.
+-- KPIs: Code count, code accuracy.
+-- Feature Reference: REF01 (Referral Codes)
+
+-- Table: search_suggestions
+-- Description: Precomputed search terms for autocomplete.
+-- Business Case: Manages search suggestions.
+-- KPIs: Suggestion count, suggestion accuracy.
+-- Feature Reference: SUGG01 (Suggestions)
+
+-- Materialized Views
+-- Table: company_aggregates
+-- Description: Pre-aggregated company metrics.
+-- Business Case: Aggregates company metrics.
+-- KPIs: Aggregation accuracy, aggregation freshness.
+-- Feature Reference: AGG01 (Company Aggregates)
+
+-- Table: manager_aggregates
+-- Description: Pre-aggregated manager metrics.
+-- Business Case: Aggregates manager metrics.
+-- KPIs: Aggregation accuracy, aggregation freshness.
+-- Feature Reference: AGG02 (Manager Aggregates)
+
+-- Table: user_activity_dashboard
+-- Description: Pre-aggregated user activity metrics.
+-- Business Case: Aggregates user activity.
+-- KPIs: Aggregation accuracy, dashboard freshness.
+-- Feature Reference: DASH01 (Activity Dashboard)
+
+-- Table: contract_compliance_dashboard
+-- Description: Contract lifecycle and compliance metrics.
+-- Business Case: Aggregates contract compliance.
+-- KPIs: Compliance accuracy, dashboard freshness.
+-- Feature Reference: DASH02 (Compliance Dashboard)
+
+-- Table: mv_api_usage_analytics
+-- Description: Pre-aggregated API usage for dashboards.
+-- Business Case: Aggregates API usage.
+-- KPIs: Aggregation accuracy, view freshness.
+-- Feature Reference: DASH03 (API Usage View)
+
+-- Table: mv_search_quality_metrics
+-- Description: Daily search quality KPIs.
+-- Business Case: Tracks search quality KPIs.
+-- KPIs: KPI accuracy, KPI freshness.
+-- Feature Reference: DASH04 (Search KPIs)
+
+-- Table: mv_query_performance_daily
+-- Description: Daily aggregated query performance.
+-- Business Case: Aggregates query performance.
+-- KPIs: Aggregation accuracy, view freshness.
+-- Feature Reference: DASH05 (Query Performance View)
+
+-- Table: mv_integration_health_summary
+-- Description: Daily aggregated integration health.
+-- Business Case: Aggregates integration health.
+-- KPIs: Aggregation accuracy, view freshness.
+-- Feature Reference: DASH06 (Integration Health View)
+
+-- Table: mv_market_skill_demand
+-- Description: Aggregated skill demand analytics.
+-- Business Case: Aggregates skill demand.
+-- KPIs: Aggregation accuracy, analysis freshness.
+-- Feature Reference: DASH07 (Skill Demand View)
+
+-- Table: mv_recommendation_performance
+-- Description: AI recommendation performance metrics.
+-- Business Case: Tracks recommendation performance.
+-- KPIs: Metric accuracy, view freshness.
+-- Feature Reference: DASH08 (Rec Performance View)
+
+-- Views
+-- Table: data_access_logs
+-- Description: View for monitoring data access activities.
+-- Business Case: Monitors data access.
+-- KPIs: Access count, monitoring accuracy.
+-- Feature Reference: VIEW01 (Access Logs View)
+
+-- Table: database_performance_diagnostics
+-- Description: Performance metrics for database optimization.
+-- Business Case: Diagnoses database performance.
+-- KPIs: Diagnostic accuracy, optimization impact.
+-- Feature Reference: VIEW02 (Perf Diagnostics View)
+
+-- Table: vw_available_languages
+-- Description: Available languages with translation completeness.
+-- Business Case: Tracks language availability.
+-- KPIs: Language coverage, completeness accuracy.
+-- Feature Reference: VIEW03 (Languages View)
+
+-- Table: vw_regional_compliance_matrix
+-- Description: Regional compliance requirements matrix.
+-- Business Case: Tracks regional compliance.
+-- KPIs: Matrix accuracy, compliance coverage.
+-- Feature Reference: VIEW04 (Compliance Matrix View)
