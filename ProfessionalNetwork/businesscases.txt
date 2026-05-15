@@ -1958,3 +1958,231 @@
 -- Business Case: Tracks regional compliance.
 -- KPIs: Matrix accuracy, compliance coverage.
 -- Feature Reference: VIEW04 (Compliance Matrix View)
+
+
+
+------new enhancements Dec 2025 documentation 
+
+--domain: Identity & Access Management
+-- Table: mfa_backup_codes
+-- Description: Securely stored one-time backup codes for MFA recovery.
+-- Business Case: Enables users to regain account access when primary MFA factors are unavailable, reducing support ticket volume and account lockouts.
+-- KPIs: Backup code usage rate, account recovery success rate, support ticket reduction.
+-- Feature Reference: AUTH05 (MFA Recovery)
+---why it matters: Enterprise users require reliable account recovery without compromising security; reduces helpdesk costs and improves user experience during authentication failures.
+
+--domain: Identity & Access Management
+-- Table: sso_providers
+-- Description: Configuration for external SAML/OIDC identity providers.
+-- Business Case: Enables enterprise SSO integration with corporate directories (Okta, Azure AD, Ping), streamlining user provisioning and access management.
+-- KPIs: SSO adoption rate, provisioning latency, authentication success rate.
+-- Feature Reference: AUTH06 (SSO Integration)
+---why it matters: Enterprise customers mandate SSO for security compliance; seamless integration accelerates sales cycles and reduces onboarding friction.
+
+--domain: Identity & Access Management
+-- Table: device_trust_scores
+-- Description: Dynamic risk scores for user devices based on behavior, location, and security posture.
+-- Business Case: Enables adaptive authentication by adjusting access requirements based on device risk, supporting zero-trust security models.
+-- KPIs: Risk detection accuracy, false positive rate, adaptive auth trigger rate.
+-- Feature Reference: SEC04 (Adaptive Auth)
+---why it matters: Zero-trust architectures require continuous risk assessment; reduces breach surface while maintaining usability for trusted devices.
+
+--domain: Identity & Access Management
+-- Table: pii_tokenization_map
+-- Description: Reversible tokenization mappings for sensitive personal data fields.
+-- Business Case: Enables secure processing of PII in non-production environments and analytics pipelines while maintaining referential integrity.
+-- KPIs: Tokenization coverage, detokenization latency, compliance audit pass rate.
+-- Feature Reference: PRIV02 (PII Tokenization)
+---why it matters: GDPR/CCPA require data minimization; tokenization enables safe development/testing without exposing real user data.
+
+--domain: Financial & Revenue Operations
+-- Table: currency_fx_rates
+-- Description: Real-time and historical foreign exchange rates with source attribution.
+-- Business Case: Enables accurate multi-currency billing, revenue recognition, and financial reporting across global markets.
+-- KPIs: Rate freshness, conversion accuracy, reconciliation variance.
+-- Feature Reference: BILL17 (FX Management)
+---why it matters: Global SaaS platforms require precise FX handling to avoid revenue leakage, ensure accurate financial statements, and comply with accounting standards.
+
+--domain: Financial & Revenue Operations
+-- Table: revenue_recognition_rules
+-- Description: Configurable rules for ASC 606/IFRS 15 revenue recognition schedules.
+-- Business Case: Automates deferred revenue calculation, amortization schedules, and compliance reporting for subscription and usage-based billing.
+-- KPIs: Rule coverage, recognition accuracy, audit adjustment rate.
+-- Feature Reference: BILL18 (Revenue Recognition)
+---why it matters: Public companies and enterprise customers require GAAP/IFRS-compliant revenue reporting; manual processes create audit risk and operational overhead.
+
+--domain: Financial & Revenue Operations
+-- Table: dunning_campaigns
+-- Description: Automated retry schedules and communication templates for failed payments.
+-- Business Case: Reduces involuntary churn by systematically recovering failed payments through intelligent retry logic and customer notifications.
+-- KPIs: Recovery rate, churn reduction, customer communication engagement.
+-- Feature Reference: BILL19 (Dunning Management)
+---why it matters: Payment failures are a leading cause of SaaS churn; automated dunning can recover 15-30% of failed transactions without manual intervention.
+
+--domain: Financial & Revenue Operations
+-- Table: tax_exemption_certificates
+-- Description: Validated tax exemption documentation by jurisdiction and customer.
+-- Business Case: Ensures accurate tax calculation for exempt entities (non-profits, government, resellers) and maintains audit-ready documentation.
+-- KPIs: Certificate validation rate, exemption accuracy, audit retrieval time.
+-- Feature Reference: BILL20 (Tax Exemptions)
+---why it matters: Incorrect tax collection creates liability and customer friction; automated exemption management reduces compliance risk and support overhead.
+
+--domain: Data Governance & Compliance
+-- Table: data_residency_routing
+-- Description: Rules for routing data storage and processing by geographic jurisdiction.
+-- Business Case: Ensures compliance with data sovereignty requirements (GDPR, CCPA, local laws) by controlling where data is stored and processed.
+-- KPIs: Routing accuracy, compliance violation count, latency impact.
+-- Feature Reference: GDPR11 (Data Residency)
+---why it matters: Many jurisdictions mandate data remain within borders; automated routing prevents costly compliance violations and enables global expansion.
+
+--domain: Data Governance & Compliance
+-- Table: consent_versions
+-- Description: Versioned consent records with legal basis, timestamp, and context.
+-- Business Case: Provides immutable audit trail of consent changes for GDPR Article 7 compliance and regulatory investigations.
+-- KPIs: Version completeness, retrieval latency, audit pass rate.
+-- Feature Reference: GDPR12 (Consent Versioning)
+---why it matters: Regulators require proof of valid consent; versioning enables precise reconstruction of user permissions at any point in time.
+
+--domain: Data Governance & Compliance
+-- Table: dsar_workflows
+-- Description: Structured workflow management for data subject access/deletion requests.
+-- Business Case: Automates GDPR/CCPA request fulfillment across distributed systems, ensuring timely, complete, and auditable responses.
+-- KPIs: Request resolution time, completeness rate, compliance penalty avoidance.
+-- Feature Reference: GDPR13 (DSAR Automation)
+---why it matters: Manual DSAR processing is error-prone and slow; automation reduces legal risk and operational cost while meeting statutory deadlines.
+
+--domain: Data Governance & Compliance
+-- Table: worm_audit_trail
+-- Description: Write-once-read-many immutable audit log storage with cryptographic verification.
+-- Business Case: Provides tamper-evident audit trails for financial, security, and compliance events required by SOC2, ISO27001, and financial regulations.
+-- KPIs: Immutability verification rate, retrieval latency, audit completeness.
+-- Feature Reference: AUD04 (Immutable Audit)
+---why it matters: Regulators and auditors require proof that logs haven't been altered; WORM storage provides cryptographic assurance of log integrity.
+
+--domain: AI/ML Operations
+-- Table: ml_feature_store
+-- Description: Centralized repository for curated, versioned ML features with lineage tracking.
+-- Business Case: Enables consistent feature engineering across training and inference, reducing model drift and improving reproducibility.
+-- KPIs: Feature reuse rate, training-inference consistency, model performance stability.
+-- Feature Reference: CAREER08 (Feature Store)
+---why it matters: Feature inconsistency between training and production is a leading cause of model degradation; centralized features improve ML reliability.
+
+--domain: AI/ML Operations
+-- Table: ml_model_registry
+-- Description: Versioned catalog of ML models with metadata, performance metrics, and deployment status.
+-- Business Case: Enables model governance, A/B testing, rollback capability, and compliance documentation for AI-driven features.
+-- KPIs: Model deployment success rate, rollback time, performance drift detection.
+-- Feature Reference: CAREER09 (Model Registry)
+---why it matters: Enterprise AI requires auditability and control; model registry enables safe deployment, monitoring, and regulatory compliance.
+
+--domain: AI/ML Operations
+-- Table: model_drift_monitoring
+-- Description: Continuous monitoring of model input distributions and prediction performance over time.
+-- Business Case: Detects degradation in ML model performance due to data drift, concept drift, or system changes, triggering retraining alerts.
+-- KPIs: Drift detection latency, false alert rate, retraining ROI.
+-- Feature Reference: CAREER10 (Drift Monitoring)
+---why it matters: Models degrade silently in production; proactive drift detection prevents business impact from outdated predictions.
+
+--domain: AI/ML Operations
+-- Table: llm_prompt_versions
+-- Description: Versioned prompt templates, parameters, and evaluation results for LLM-powered features.
+-- Business Case: Enables systematic testing, rollback, and compliance tracking for generative AI features with audit-ready prompt history.
+-- KPIs: Prompt performance variance, rollback success rate, compliance documentation completeness.
+-- Feature Reference: CAREER11 (Prompt Management)
+---why it matters: LLM outputs are sensitive to prompt changes; versioning enables reproducible results, A/B testing, and regulatory accountability.
+
+--domain: Content & Community Trust
+-- Table: copyright_dmca_claims
+-- Description: Structured workflow for DMCA takedown notices and counter-notifications.
+-- Business Case: Ensures legal compliance with copyright laws by managing takedown workflows, safe harbor requirements, and user appeals.
+-- KPIs: Claim processing time, false positive rate, legal exposure reduction.
+-- Feature Reference: MOD06 (Copyright Compliance)
+---why it matters: Platforms face liability for user-uploaded content; structured DMCA workflows protect safe harbor status and reduce legal risk.
+
+--domain: Content & Community Trust
+-- Table: creator_royalty_splits
+-- Description: Configurable revenue sharing rules for collaborative content and multi-creator works.
+-- Business Case: Enables fair, automated distribution of monetization revenue among collaborators, supporting creator economy business models.
+-- KPIs: Split accuracy, payout timeliness, creator satisfaction score.
+-- Feature Reference: CRE03 (Royalty Management)
+---why it matters: Creator platforms require transparent, automated revenue splits to attract talent and avoid disputes; manual splits don't scale.
+
+--domain: Content & Community Trust
+-- Table: bot_detection_scores
+-- Description: Real-time risk scores for user accounts and sessions based on behavioral patterns.
+-- Business Case: Identifies automated accounts, scrapers, and abuse patterns to protect platform integrity and reduce fraud.
+-- KPIs: Detection accuracy, false positive rate, abuse prevention rate.
+-- Feature Reference: SEC05 (Bot Detection)
+---why it matters: Bots distort analytics, spam content, and defraud monetization; automated detection protects user experience and revenue.
+
+--domain: HR & Talent Operations
+-- Table: performance_reviews
+-- Description: Structured performance evaluation cycles with goals, feedback, and calibration.
+-- Business Case: Enables enterprise talent management with standardized review processes, 360 feedback, and promotion calibration.
+-- KPIs: Review completion rate, calibration consistency, promotion accuracy.
+-- Feature Reference: HR03 (Performance Management)
+---why it matters: Enterprise customers require robust performance management for retention and development; standardized processes ensure fairness and legal defensibility.
+
+--domain: HR & Talent Operations
+-- Table: compensation_bands
+-- Description: Salary ranges, equity guidelines, and bonus structures by role, level, and location.
+-- Business Case: Ensures pay equity, budget control, and market competitiveness in compensation decisions across global teams.
+-- KPIs: Band adherence rate, equity distribution fairness, market competitiveness score.
+-- Feature Reference: HR04 (Compensation Management)
+---why it matters: Pay equity regulations and talent retention require transparent, data-driven compensation; bands prevent costly errors and legal exposure.
+
+--domain: HR & Talent Operations
+-- Table: compliance_training_records
+-- Description: Tracking of mandatory training completion, certifications, and renewal dates.
+-- Business Case: Ensures organizational compliance with industry regulations (SOX, HIPAA, FINRA) by monitoring required training completion.
+-- KPIs: Completion rate, renewal timeliness, audit pass rate.
+-- Feature Reference: HR05 (Compliance Training)
+---why it matters: Regulatory fines for training non-compliance can be severe; automated tracking reduces risk and audit preparation effort.
+
+--domain: Infrastructure & DevOps
+-- Table: finops_cost_allocation
+-- Description: Resource cost attribution by team, product, feature, and customer for cloud spend optimization.
+-- Business Case: Enables showback/chargeback of infrastructure costs, driving accountability and optimization in cloud spending.
+-- KPIs: Allocation accuracy, cost savings identified, budget variance reduction.
+-- Feature Reference: INFRA01 (FinOps)
+---why it matters: Cloud costs can spiral without visibility; granular allocation enables optimization, budgeting, and customer-level profitability analysis.
+
+--domain: Infrastructure & DevOps
+-- Table: deployment_releases
+-- Description: Immutable record of code deployments with version, environment, approver, and rollback metadata.
+-- Business Case: Provides audit trail for change management, enables rapid rollback, and supports compliance with change control policies.
+-- KPIs: Deployment success rate, rollback time, change approval compliance.
+-- Feature Reference: INFRA02 (Release Management)
+---why it matters: Enterprise change control requires deployment auditability; structured release tracking reduces incident risk and accelerates recovery.
+
+--domain: Infrastructure & DevOps
+-- Table: incident_postmortems
+-- Description: Structured root cause analysis, action items, and lessons learned for production incidents.
+-- Business Case: Drives continuous improvement by capturing institutional knowledge from incidents and tracking remediation progress.
+-- KPIs: Postmortem completion rate, action item closure rate, repeat incident reduction.
+-- Feature Reference: INFRA03 (Incident Management)
+---why it matters: Learning from failures prevents recurrence; structured postmortems turn incidents into improvement opportunities and compliance evidence.
+
+--domain: Product & Growth Analytics
+-- Table: funnel_definitions
+-- Description: Configurable user journey funnels with step definitions, filters, and conversion windows.
+-- Business Case: Enables product teams to define, measure, and optimize key user journeys without engineering dependency.
+-- KPIs: Funnel accuracy, insight generation time, conversion improvement rate.
+-- Feature Reference: ANA19 (Funnel Analytics)
+---why it matters: Growth depends on understanding drop-off points; self-service funnel definition accelerates experimentation and optimization.
+
+--domain: Product & Growth Analytics
+-- Table: customer_health_scores
+-- Description: Composite metrics predicting churn, expansion, and satisfaction based on usage, support, and billing signals.
+-- Business Case: Enables proactive customer success interventions by identifying at-risk or high-potential accounts before outcomes occur.
+-- KPIs: Prediction accuracy, intervention success rate, retention improvement.
+-- Feature Reference: ANA20 (Health Scoring)
+---why it matters: Reactive churn management loses customers; predictive health scores enable timely, targeted retention efforts that improve LTV.
+
+--domain: Product & Growth Analytics
+-- Table: personalization_rules
+-- Description: Business-rule engine for content, feature, and experience personalization without code deployment.
+-- Business Case: Enables product and marketing teams to test and deploy personalized experiences rapidly based on user segments and behavior.
+-- KPIs: Rule deployment time, personalization lift, experiment velocity.
+-- Feature Reference: ANA21 (Personalization Engine)
+---why it matters: Personalization drives engagement and conversion; rule-based engine enables rapid iteration without engineering bottlenecks.
