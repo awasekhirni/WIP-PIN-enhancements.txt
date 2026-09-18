@@ -10,3 +10,10 @@ Time (s),Absolute Evap System Vapor Pressure (kPa),Short Term Fuel Trim Bank 1 (
 0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 22.3,98.555,-1.6,378.0,4,0.800,98,99.2,215.7,215.8,415.8,415.8,-5.5,-0.8,46.3,34,400,99.2,15.7,13.3,13.530,0.0,1.000,0.997,14.9,31.8,2.82,14.9,34,1.002,-0.1,3.279,21.3,388,15432,76,16.5,-0.009,702,21.2,0,2370,-0.8,0.995,0.793,0.0,1.000,3.308,-0.002,4.0
 44.6,98.555,-1.6,378.0,3,0.805,98,99.2,214.1,214.1,413.5,413.5,-5.5,-0.8,46.3,34,400,99.2,15.7,13.2,13.523,0.0,1.000,0.997,14.9,31.8,2.80,14.9,34,1.001,-0.8,3.275,21.2,400,15950,76,16.1,-0.008,708,22.0,0,2370,-0.8,0.998,0.785,0.0,1.002,3.295,-0.008,4.0
+
+
+# Update Sep 18 2026. Note every 3 months we are constantly updating our software and architecture/releases.
+Having worked on this platform since Jan 2025 we are currently in different versions.
+-- Updating version 8 architecture diagram which was last published in Aug 2025. 
+-- After a year, We have more modules, more coverage and features. Sep 2026. Version 12 architecture diagram. 
+
